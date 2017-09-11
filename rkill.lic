@@ -41,71 +41,13 @@ def poaching
 #	echo @current_group
 end
 
-def poaching2
-#			 if(leading?)
-	echo "poaching2 start"
-
-	@someone_here = nil
-	checkpcs.each { |pc|
-		if pc.name != /Ericos|Predest|Draccor|Erienne|Enzick|Ejavoz|Berrasi|Baalico|Poainis|Jaelus|Arrigorn|Reetta|Alyssea|Szyxt|Naina|Tyrrah|Istoriel|Martyle|Archaeron|Martiel|Queshu|Sarkkhan|Reetta|Khaleid|Boker/i
-			@someone_here = true
-		end
-	}
-	if @someone_here
-		sleep 1.0
-	end
-end
-
-def bs_put(message)
-	unless script = Script.self then respond('--- waitfor: Unable to identify calling script.'); return false; end
-	clear
-	put(message)
-
-	while string = get
-		if string =~ /(?:\.\.\.wait |Wait )[0-9]+/
-			hold_up = string.slice(/[0-9]+/).to_i
-			sleep(hold_up - 1) unless hold_up.nil? || hold_up == 1
-			clear
-			put(message)
-			next
-		elsif string =~ /struggle.+stand/
-			clear
-			bs_put("stand")
-			next
-		elsif string =~ /stunned|can't do that while|cannot seem|can't seem|don't seem|Sorry, you may only type ahead/
-			if dead?
-				echo("You're dead...! You can't do that!")
-				sleep 0.25
-				script.downstream_buffer.unshift(string)
-				return false
-			elsif checkstunned
-				while checkstunned
-					sleep("0.25".to_f)
-				end
-			elsif checkwebbed
-				while checkwebbed
-					sleep("0.25".to_f)
-				end
-			else
-				sleep(0.25)
-			end
-			clear
-			put(message)
-			next
-		else
-			script.downstream_buffer.unshift(string)
-			return string
-		end
-	end
-end
-
-def change_stance( new_stance, force = true )
+def change_stance new_stance, force = true
 	#return unless new_stance =~ /off/ # pookahs/bog
 	return if Spell[1617].active? || Spell[216].active? || dead?
 
-	if( stance() =~ /#{new_stance}/ )
+	if stance() =~ /#{new_stance}/
 		return
-	elsif( checkcastrt() > 0 && new_stance =~ /def/ )
+	elsif checkcastrt() > 0 && new_stance =~ /def/
 		return if stance() == 'guarded'
 	end
 
@@ -116,10 +58,10 @@ def change_stance( new_stance, force = true )
 	end
 end
 
-def stand()
+def stand
 	until(standing?)
 		change_stance('defensive')
-		bs_put 'stand'
+		fput 'stand'
 	end
 end
 
@@ -205,7 +147,7 @@ def cmd_voln
 
 end
 
-def cmd_fury ( target )
+def cmd_fury target
 	return unless Spell[635].known? and Spell[635].affordable?
 	return if checkmana <= 45
 	return if(hiding?)
@@ -220,7 +162,7 @@ def cmd_fury ( target )
 
 end
 
-def cmd_swarm( target )
+def cmd_swarm target
 	return if target.status =~ /dead|gone/
 	return if GameObj.loot.find { |loot| loot.name =~ /swarm/ }
 	return if GameObj.loot.find { |loot| loot.name =~ /vine/ }
@@ -236,7 +178,7 @@ def cmd_swarm( target )
 	waitcastrt?
 end
 
-def cmd_weed( target )
+def cmd_weed target
 	return if target.status =~ /dead|gone/
 	return if GameObj.loot.find { |loot| loot.name =~ /vine/ }
 	return unless Spell[610].known? and Spell[610].affordable?
@@ -251,7 +193,7 @@ def cmd_weed( target )
 	waitcastrt?
 end
 
-def cmd_sounds( target)
+def cmd_sounds target
 	return if target.status =~ /dead|gone/
 	return unless Spell[607].known? and Spell[607].affordable?
 
@@ -283,12 +225,11 @@ def cmd_hide
 	end
 end
 
-def cmd_ambush( target )
+def cmd_ambush target
 	return if target.status =~ /dead|gone/
 
 	change_stance('offensive')
 	if @target.status =~ /kneel|sit|lying|stunned/
-#		fput "ambush ##{target.id} head"
 		result = dothistimeout( "ambush ##{target.id} head", 2, /You leap|You cannot|does not have a|already missing|Could not find|seconds/ )
 		if( result =~ /You cannot|already missing/ )
 			result = dothistimeout( "ambush ##{target.id} right leg", 2, /You leap|You cannot|does not have a|already missing|Could not find|seconds/ )
@@ -311,11 +252,11 @@ def cmd_ambush( target )
 	change_stance('defensive')
 end
 
-def cmd_kill( target )
+def cmd_kill target
 	return if target.status =~ /dead|gone/
 
 	change_stance('offensive')
-		fput "kill ##{target.id}"
+	fput "kill ##{target.id}"
 	change_stance('defensive')
 	end
 
@@ -335,7 +276,7 @@ def cmd_mstrike
 	end
 end
 
-def cmd_vibration( target)
+def cmd_vibration target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1002].known? and Spell[1002].affordable?
 
@@ -345,17 +286,16 @@ def cmd_vibration( target)
 
 end
 
-def cmd_bone( target)
+def cmd_bone target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1106].known? and Spell[1106].affordable?
 
-# remove?		fput "target ##{target.id}"
 		waitcastrt?
 		multifput "incant 1106", "stance defensive"
 		waitcastrt?
 end
 
-def cmd_empathiclink( target)
+def cmd_empathiclink target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1117].known? and Spell[1117].affordable?
 	return if checkmana <= 45
@@ -370,7 +310,7 @@ def cmd_empathiclink( target)
 
 end
 
-def cmd_bind( target)
+def cmd_bind target
 	return unless Spell[214].known?
 
 	GameObj.npcs.each { |npc|
@@ -396,16 +336,11 @@ def cmd_target
 end
 
 def cmd_loot
-#	return if(hiding?)
-#	echo "Looting @target"
-#	@target = GameObj.npcs.find { |npc| npc.name =~ @valid_targets and npc.status == 'dead' }
 	@target = GameObj.npcs.find { |npc| npc.name = npc.status == 'dead' }
 		if @target
-#				start_script "sskin", ["target"]
 			start_script "sloot"
 			wait_while{running?('sloot')}
 		else
-#			echo "Sleeping"
 			sleep 0.1
 		end
 end
@@ -539,10 +474,8 @@ def alyskill
 def archkill
 	echo "start"
 	while true
-#		echo "while true"
 		poaching
 		if !@someone_here
-#			echo "after poaching"
 
 			cmd_voln
 
@@ -552,7 +485,6 @@ def archkill
 			@target = nil
 			cmd_target
 			target = @target
-#			echo "target"
 			if target
 				cmd_vibration target
 				cmd_kill target
