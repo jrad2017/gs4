@@ -3,6 +3,7 @@ Script for hunting with Ericos et al.
 =end
 
 @core_group = ["Ericos", "Predest", "Alyssea", "Archaeron", "Draccor", "Naina", "Szyxt"]
+@target_types = /aggressive npc|undead|bandit|grimswarm/
 
 def name
 	#Function to get active character name
@@ -65,6 +66,11 @@ def stand
 	end
 end
 
+def is_valid_target npc
+  #Function which determines if an NPC is a valid target for combat
+  npc.name =~ @valid_targets and npc.status !~ /dead|gone/i and npc.type =~ @target_types
+end
+
 def maintain_spells spells, min_mana = -1, max_mana = -1
   #Ensures that all given spells are active, and casts to refresh them, assuming spells are affordable.
   return if spells.all? {|spell| spell.active?}
@@ -112,15 +118,12 @@ def cmd_fury target
 	return unless Spell[635].known? and Spell[635].affordable?
 	return if checkmana <= 45
 	return if(hiding?)
-	count = nil
-	GameObj.npcs.each { |npc| count += 1 if npc.status !~ /dead/i }
-	return if count < 5
+	return if GameObj.npcs.count { |npc| is_valid_target npc } < 5
 
 	waitcastrt?
 	Spell[635].cast("#{target}")
 	change_stance('guarded')
 	waitcastrt?
-
 end
 
 def cmd_swarm target
@@ -253,34 +256,30 @@ def cmd_empathiclink target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1117].known? and Spell[1117].affordable?
 	return if checkmana <= 45
-	count = nil
-	GameObj.npcs.each { |npc| count += 1 if npc.status !~ /dead/i }
-	return if count < 4
+	return if GameObj.npcs.count { |npc| is_valid_target npc } < 4
 
 	waitcastrt?
 	Spell[1117].cast("#{target}")
 	change_stance('guarded')
 	waitcastrt?
-
 end
 
 def cmd_bind target
+  #Attempts to bind all monsters which are alive and unbound, while maintaining 50 mana
 	return unless Spell[214].known?
 
 	GameObj.npcs.each { |npc|
 #		 echo "##{npc.id} #{npc.status !~ /immobilized|dead|gone/i}"
-		if npc.type =~ /aggressive npc/ and npc.status !~ /frozen|dead|gone/i and checkmana > 50
+		if npc.type =~ @target_types and npc.status !~ /frozen|dead|gone/i and checkmana > 50
 			Spell[214].cast "##{npc.id}"
 		end
 	}
-
 end
 
 def cmd_target
 # echo "target start"
 	if checknpcs
-		@target = nil
-		@target = GameObj.npcs.find { |npc| npc.name =~ @valid_targets and npc.status != 'dead' }
+		@target = GameObj.npcs.find { |npc| is_valid_target npc }
 			if @target
 				echo @target
 				target = @target
@@ -290,7 +289,7 @@ def cmd_target
 end
 
 def cmd_loot
-	@target = GameObj.npcs.find { |npc| npc.name = npc.status == 'dead' }
+	@target = GameObj.npcs.find { |npc| npc.status == 'dead' }
 		if @target
 			start_script "sloot"
 			wait_while{running?('sloot')}
