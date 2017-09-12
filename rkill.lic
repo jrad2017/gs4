@@ -306,39 +306,15 @@ def cmd_loot
 		end
 end
 
-def rkill
-	if checknpcs
-	target_result = dothistimeout 'target random', 5, /^Could not find a valid target\.$|^You are now targeting/
-	if target_result =~ /^You are now targeting \w+ (.*)\.$/
-		ambush
-	elsif target_result == 'Could not find a valid target.'
-		start_script "sskin", ["target"]
-		wait_while{running?('sskin')}
-	end
-end
-end
-
-def jkill
-	if checknpcs
-	target_result = dothistimeout 'target random', 5, /^Could not find a valid target\.$|^You are now targeting/
-	if target_result =~ /^You are now targeting \w+ (.*)\.$/
-		cmd_mstrike
-	elsif target_result == 'Could not find a valid target.'
-		start_script "sskin", ["target"]
-		wait_while{running?('sskin')}
-	end
-end
-end
-
 def ekill
 	cmd_col
 end
 
 def pkill
-	while true
+	loop {
+    cmd_gos
 		poaching
 		if !@someone_here
-			cmd_gos
 
 			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
 			valid_loot = /(rat|rolton)/i
@@ -362,53 +338,12 @@ def pkill
 			end
 		end
 		sleep 1.0
-	end
-end
-
-def bkill
-	poaching
-	if !@someone_here
-
-		@valid_targets = /(rat|great boar|black bear|manticore|black bear|hill troll|war troll|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|banshee|troll king|dweller|harbinger|steed|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|solldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder)/i
-		valid_loot = /(rat|rolton)/i
-		target = nil
-		@target = nil
-		cmd_target
-		target = @target
-		if target
-			cmd_smastery
-			cmd_hide
-			cmd_ambush target
-	#		cmd_kill target
-		else
-			cmd_loot
-		end
-	end
-end
-
-def pokill
-	poaching
-	if !@someone_here
-
-		@valid_targets = /(rat|great boar|black bear|manticore|black bear|hill troll|war troll|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|banshee|troll king|dweller|harbinger|steed|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder)/i
-		valid_loot = /(rat|rolton)/i
-		target = nil
-		@target = nil
-		cmd_target
-		target = @target
-		if target
-			cmd_gos
-			cmd_kill target
-		else
-			cmd_loot
-		end
-	end
+	}
 end
 
 def alyskill
-	while true
+	loop {
 		cmd_gos
-
 		poaching
 		if !@someone_here
 
@@ -429,16 +364,15 @@ def alyskill
 				end
 			end
 			sleep 0.5
-		end
-	end
+    end
+	}
+end
 
 def archkill
-	echo "start"
-	while true
+	loop {
+    cmd_voln
 		poaching
 		if !@someone_here
-
-			cmd_voln
 
 			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
 			valid_loot = /(rat|rolton)/i
@@ -454,7 +388,7 @@ def archkill
 			end
 		end
 		sleep 0.5
-	end
+	}
 end
 
 toggle_upstream
@@ -472,21 +406,14 @@ command_thread = Thread.new {
 
 loop {
 	stand
-	if name == 'Jrad'
-		jkill
-	elsif name == 'Alyssea'
-		alyskill
-	elsif name == 'Archaeron'
+  case name
+  when 'Alyssea'
+    alyskill
+	when 'Archaeron'
 		archkill
-	elsif name == 'Ryck'
-		rkill
-	elsif name == 'Predest'
+	when 'Predest'
 		pkill
-	elsif name == 'Baalico'
-		bkill
-	elsif name == 'Poainis'
-		pokill
-	elsif name == 'Ericos'
+	when 'Ericos'
 		ekill
 	end
 	sleep 1.0
