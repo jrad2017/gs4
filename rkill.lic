@@ -186,7 +186,7 @@ def cmd_ambush target
 	return if target.status =~ /dead|gone/
 
 	change_stance('offensive')
-	if @target.status =~ /kneel|sit|lying|stunned/
+	if target.status =~ /kneel|sit|lying|stunned/
 		result = dothistimeout( "ambush ##{target.id} head", 2, /You leap|You cannot|does not have a|already missing|Could not find|seconds/ )
 		if( result =~ /You cannot|already missing/ )
 			result = dothistimeout( "ambush ##{target.id} right leg", 2, /You leap|You cannot|does not have a|already missing|Could not find|seconds/ )
@@ -277,15 +277,11 @@ def cmd_bind target
 end
 
 def cmd_target
-# echo "target start"
-	if checknpcs
-		@target = GameObj.npcs.find { |npc| is_valid_target npc }
-			if @target
-				echo @target
-				target = @target
-				fput "target ##{target.id}"
-			end
+	target = GameObj.npcs.find { |npc| is_valid_target npc }
+	if target
+		fput "target ##{target.id}"
 	end
+  target
 end
 
 def cmd_sympathy
@@ -297,13 +293,13 @@ def cmd_sympathy
 end
 
 def cmd_loot
-	@target = GameObj.npcs.find { |npc| npc.status == 'dead' }
-		if @target
-			start_script "sloot"
-			wait_while{running?('sloot')}
-		else
-			sleep 0.1
-		end
+	target = GameObj.npcs.find { |npc| npc.status == 'dead' }
+	if target
+		start_script "sloot"
+		wait_while{running?('sloot')}
+	else
+		sleep 0.1
+	end
 end
 
 def ekill
@@ -317,11 +313,7 @@ def pkill
 		if !@someone_here
 
 			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
-			valid_loot = /(rat|rolton)/i
-			target = nil
-			@target = nil
-			cmd_target
-			target = @target
+			target = cmd_target
 			if target
 				cmd_gos
 				cmd_smastery
@@ -348,11 +340,7 @@ def alyskill
 		if !@someone_here
 
 			@valid_targets = /(warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|janissary|herald|griffin|scout|adept|lurk|fanatic|monstrosity|shaper|sentinel|lesser minotaur|krag yeti|minotaur warrior|minotaur magus|jarl|krynch|elder|being|goleras|moulis|shrickhen|champion|seer|initiate|dogmatist|hierophant|supplicant)/i
-			valid_loot = /(rat|rolton)/i
-			target = nil
-			@target = nil
-			cmd_target
-			target = @target
+			target = cmd_target
 			if target
 				cmd_gos
 			#	cmd_bind target
@@ -375,11 +363,7 @@ def archkill
 		if !@someone_here
 
 			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
-			valid_loot = /(rat|rolton)/i
-			target = nil
-			@target = nil
-			cmd_target
-			target = @target
+			target = cmd_target
 			if target
 				cmd_vibration target
 				cmd_kill target
