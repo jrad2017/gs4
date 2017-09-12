@@ -233,6 +233,7 @@ end
 def cmd_vibration target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1002].known? and Spell[1002].affordable?
+	return if checkmana <= 45
 
 	waitcastrt?
 	Spell[1002].cast("#{target}")
