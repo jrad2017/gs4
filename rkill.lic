@@ -3,10 +3,11 @@ Script for hunting with Ericos et al.
 =end
 
 @core_group = ["Ericos", "Predest", "Alyssea", "Archaeron", "Draccor", "Naina", "Szyxt"]
+@target_types = /aggressive npc|undead|bandit|grimswarm/
 
 def name
 	#Function to get active character name
-	return Char.name
+	Char.name
 end
 
 def get_current_group
@@ -29,83 +30,22 @@ end
 
 def poaching
 	#Test if someone in the room is unexpected, to avoid poaching
-	@someone_here = false
 	#Get minimal list of names to care about
 		pcs = Set.new @core_group
 		@group_mutex.synchronize {
 			pcs.merge @current_group
 		}
 	party_members = Regexp.new pcs.to_a.join("|")
-	@someone_here = GameObj.pcs.any? {|pc| pc.name !~ party_members}
-#	echo @someone_here
-#	echo @current_group
+	GameObj.pcs.any? {|pc| pc.name !~ party_members}
 end
 
-def poaching2
-#			 if(leading?)
-	echo "poaching2 start"
-
-	@someone_here = nil
-	checkpcs.each { |pc|
-		if pc.name != /Ericos|Predest|Draccor|Erienne|Enzick|Ejavoz|Berrasi|Baalico|Poainis|Jaelus|Arrigorn|Reetta|Alyssea|Szyxt|Naina|Tyrrah|Istoriel|Martyle|Archaeron|Martiel|Queshu|Sarkkhan|Reetta|Khaleid|Boker/i
-			@someone_here = true
-		end
-	}
-	if @someone_here
-		sleep 1.0
-	end
-end
-
-def bs_put(message)
-	unless script = Script.self then respond('--- waitfor: Unable to identify calling script.'); return false; end
-	clear
-	put(message)
-
-	while string = get
-		if string =~ /(?:\.\.\.wait |Wait )[0-9]+/
-			hold_up = string.slice(/[0-9]+/).to_i
-			sleep(hold_up - 1) unless hold_up.nil? || hold_up == 1
-			clear
-			put(message)
-			next
-		elsif string =~ /struggle.+stand/
-			clear
-			bs_put("stand")
-			next
-		elsif string =~ /stunned|can't do that while|cannot seem|can't seem|don't seem|Sorry, you may only type ahead/
-			if dead?
-				echo("You're dead...! You can't do that!")
-				sleep 0.25
-				script.downstream_buffer.unshift(string)
-				return false
-			elsif checkstunned
-				while checkstunned
-					sleep("0.25".to_f)
-				end
-			elsif checkwebbed
-				while checkwebbed
-					sleep("0.25".to_f)
-				end
-			else
-				sleep(0.25)
-			end
-			clear
-			put(message)
-			next
-		else
-			script.downstream_buffer.unshift(string)
-			return string
-		end
-	end
-end
-
-def change_stance( new_stance, force = true )
+def change_stance new_stance, force = true
 	#return unless new_stance =~ /off/ # pookahs/bog
 	return if Spell[1617].active? || Spell[216].active? || dead?
 
-	if( stance() =~ /#{new_stance}/ )
+	if stance() =~ /#{new_stance}/
 		return
-	elsif( checkcastrt() > 0 && new_stance =~ /def/ )
+	elsif checkcastrt() > 0 && new_stance =~ /def/
 		return if stance() == 'guarded'
 	end
 
@@ -116,111 +56,74 @@ def change_stance( new_stance, force = true )
 	end
 end
 
-def stand()
+def stand
 	until(standing?)
 		change_stance('defensive')
-		bs_put 'stand'
+		fput 'stand'
 	end
 end
 
+def is_valid_target npc, valid_targets=@valid_targets, target_types=@target_types
+  #Function which determines if an NPC is a valid target for combat
+  npc.name =~ valid_targets and npc.status !~ /dead|gone/i and npc.type =~ target_types
+end
+
+def maintain_spells spells, min_mana: -1, max_mana: -1
+  #Ensures that all given spells are active, and casts to refresh them, assuming spells are affordable.
+  return if spells.all? {|spell| spell.active?}
+  return if min_mana >= 0 and checkmana <= min_mana
+  return if max_mana >= 0 and checkmana >= max_mana
+
+  spells.each { |spell|
+    if spell.known? and spell.affordable? and !spell.active?
+      waitcastrt?
+      spell.cast
+      waitcastrt?
+    end
+  }
+end
 
 def cmd_gos
-	return if Spell[9705].active? and Spell[9707].active? and Spell[9708].active? and Spell[9710].active?
-	return if checkmana <= 15
-
-	if Spell[9705].known? and Spell[9705].affordable? and !Spell[9705].active?
-		Spell[9705].cast
-	end
-	if Spell[9707].known? and Spell[9707].affordable? and !Spell[9707].active?
-		Spell[9707].cast
-	end
-	if Spell[9708].known? and Spell[9708].affordable? and !Spell[9708].active?
-		Spell[9708].cast
-	end
-	if Spell[9710].known? and Spell[9710].affordable? and !Spell[9710].active?
-		Spell[9710].cast
-	end
-
+  sigils = [Spell[9705], Spell[9707], Spell[9708], Spell[9710]]
+	maintain_spells sigils, min_mana: 15
 end
 
 def cmd_power
-	 return unless Spell['sigil of power'].known? and Spell['sigil of power'].affordable?
-	 return if checkmana >= 100
-
-	# Pause for safety to allow lich to monitor stamina/mana
-	Spell['sigil of power'].cast; pause 0.5
-
+    power = [Spell[9718]]
+    maintain_spells power, max_mana: 100
+    # Pause to ensure lich can track stamina/mana
+    pause 0.5
 end
 
 def cmd_col
-	return if Spell[9903].active? and Spell[9904].active? and Spell[9907].active? and Spell[9908].active? and Spell[9912].active? and Spell[9913].active?
-
-	if Spell[9903].known? and Spell[9903].affordable? and !Spell[9903].active?
-		Spell[9903].cast
-	end
-	if Spell[9904].known? and Spell[9904].affordable? and !Spell[9904].active?
-		Spell[9904].cast
-	end
-	if Spell[9907].known? and Spell[9907].affordable? and !Spell[9907].active?
-		Spell[9907].cast
-	end
-	if Spell[9908].known? and Spell[9908].affordable? and !Spell[9908].active?
-		Spell[9908].cast
-	end
-	if Spell[9912].known? and Spell[9912].affordable? and !Spell[9912].active?
-		Spell[9912].cast
-	end
-	if Spell[9913].known? and Spell[9913].affordable? and !Spell[9913].active?
-	Spell[9913].cast
-	end
-
+    signs = [Spell[9904], Spell[9907], Spell[9908], Spell[9912], Spell[9913]]
+    maintain_spells signs, min_mana: 5
 end
 
 def cmd_voln
-	return if Spell[9805].active? and Spell[9806].active?
-
-	if Spell[9805].known? and Spell[9805].affordable? and !Spell[9805].active?
-		Spell[9904].cast
-	end
-	if Spell[9806].known? and Spell[9806].affordable? and !Spell[9806].active?
-		Spell[9806].cast
-	end
-
+    symbols = [Spell[9805], Spell[9806]]
+    maintain_spells symbols
 end
 
 def cmd_smastery
-return unless Spell[9603].known? and Spell[9603].affordable?
-return if Spell[9603].active?
-return if Spell[9604].active?
-
-Spell[9603].cast
-
+    #Check if cooldown is in effect
+    return if Spell[9604].active?
+    maintain_spells [Spell[9603]]
 end
 
-def cmd_voln
-	return if Spell[9805].active? and Spell[9806].active?
-
-	Spell[9805].cast
-	Spell[9806].cast
-
-end
-
-def cmd_fury ( target )
+def cmd_fury target
 	return unless Spell[635].known? and Spell[635].affordable?
 	return if checkmana <= 45
 	return if(hiding?)
-	count = nil
-	GameObj.npcs.each { |npc| count += 1 if npc.status !~ /dead/i }
-	return if count < 5
+	return if GameObj.npcs.count { |npc| is_valid_target npc } < 5
 
 	waitcastrt?
 	Spell[635].cast("#{target}")
 	change_stance('guarded')
 	waitcastrt?
-
 end
 
-def cmd_swarm( target )
+def cmd_swarm target
 	return if target.status =~ /dead|gone/
 	return if GameObj.loot.find { |loot| loot.name =~ /swarm/ }
 	return if GameObj.loot.find { |loot| loot.name =~ /vine/ }
@@ -236,7 +139,7 @@ def cmd_swarm( target )
 	waitcastrt?
 end
 
-def cmd_weed( target )
+def cmd_weed target
 	return if target.status =~ /dead|gone/
 	return if GameObj.loot.find { |loot| loot.name =~ /vine/ }
 	return unless Spell[610].known? and Spell[610].affordable?
@@ -251,7 +154,7 @@ def cmd_weed( target )
 	waitcastrt?
 end
 
-def cmd_sounds( target)
+def cmd_sounds target
 	return if target.status =~ /dead|gone/
 	return unless Spell[607].known? and Spell[607].affordable?
 
@@ -263,14 +166,7 @@ end
 
 def cmd_camo
 	return if(hiding?)
-	return unless Spell[608].known? and Spell[608].affordable?
-	return if checkmana <= 15
-	return if Spell[506].active?
-
-	waitcastrt?
-	Spell[608].cast
-	waitcastrt?
-
+  maintain_spells [Spell[608]], min_mana: 15
 end
 
 
@@ -283,12 +179,11 @@ def cmd_hide
 	end
 end
 
-def cmd_ambush( target )
+def cmd_ambush target
 	return if target.status =~ /dead|gone/
 
 	change_stance('offensive')
-	if @target.status =~ /kneel|sit|lying|stunned/
-#		fput "ambush ##{target.id} head"
+	if target.status =~ /kneel|sit|lying|stunned/
 		result = dothistimeout( "ambush ##{target.id} head", 2, /You leap|You cannot|does not have a|already missing|Could not find|seconds/ )
 		if( result =~ /You cannot|already missing/ )
 			result = dothistimeout( "ambush ##{target.id} right leg", 2, /You leap|You cannot|does not have a|already missing|Could not find|seconds/ )
@@ -311,11 +206,11 @@ def cmd_ambush( target )
 	change_stance('defensive')
 end
 
-def cmd_kill( target )
+def cmd_kill target
 	return if target.status =~ /dead|gone/
 
 	change_stance('offensive')
-		fput "kill ##{target.id}"
+	fput "kill ##{target.id}"
 	change_stance('defensive')
 	end
 
@@ -335,9 +230,10 @@ def cmd_mstrike
 	end
 end
 
-def cmd_vibration( target)
+def cmd_vibration target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1002].known? and Spell[1002].affordable?
+	return if checkmana <= 45
 
 	waitcastrt?
 	Spell[1002].cast("#{target}")
@@ -345,93 +241,63 @@ def cmd_vibration( target)
 
 end
 
-def cmd_bone( target)
+def cmd_bone target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1106].known? and Spell[1106].affordable?
 
-# remove?		fput "target ##{target.id}"
 		waitcastrt?
 		multifput "incant 1106", "stance defensive"
 		waitcastrt?
 end
 
-def cmd_empathiclink( target)
+def cmd_empathiclink target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1117].known? and Spell[1117].affordable?
 	return if checkmana <= 45
-	count = nil
-	GameObj.npcs.each { |npc| count += 1 if npc.status !~ /dead/i }
-	return if count < 4
+	return if GameObj.npcs.count { |npc| is_valid_target npc } < 4
 
 	waitcastrt?
 	Spell[1117].cast("#{target}")
 	change_stance('guarded')
 	waitcastrt?
-
 end
 
-def cmd_bind( target)
+def cmd_bind target
+  #Attempts to bind all monsters which are alive and unbound, while maintaining 50 mana
 	return unless Spell[214].known?
 
 	GameObj.npcs.each { |npc|
 #		 echo "##{npc.id} #{npc.status !~ /immobilized|dead|gone/i}"
-		if npc.type =~ /aggressive npc/ and npc.status !~ /frozen|dead|gone/i and checkmana > 50
+		if npc.type =~ @target_types and npc.status !~ /frozen|dead|gone/i and checkmana > 50
 			Spell[214].cast "##{npc.id}"
 		end
 	}
-
 end
 
 def cmd_target
-# echo "target start"
-	if checknpcs
-		@target = nil
-		@target = GameObj.npcs.find { |npc| npc.name =~ @valid_targets and npc.status != 'dead' }
-			if @target
-				echo @target
-				target = @target
-				fput "target ##{target.id}"
-			end
+	target = GameObj.npcs.find { |npc| is_valid_target npc }
+	if target
+		fput "target ##{target.id}"
 	end
+  target
+end
+
+def cmd_sympathy
+  #Cast sympathy if enough creatures are present
+  sympathy = Spell[1120]
+  return unless sympathy.known? and sympathy.affordable?
+  return if GameObj.npcs.count { |npc| is_valid_target npc, target_types=/bandit/ } < 6
+  sympathy.cast
 end
 
 def cmd_loot
-#	return if(hiding?)
-#	echo "Looting @target"
-#	@target = GameObj.npcs.find { |npc| npc.name =~ @valid_targets and npc.status == 'dead' }
-	@target = GameObj.npcs.find { |npc| npc.name = npc.status == 'dead' }
-		if @target
-#				start_script "sskin", ["target"]
-			start_script "sloot"
-			wait_while{running?('sloot')}
-		else
-#			echo "Sleeping"
-			sleep 0.1
-		end
-end
-
-def rkill
-	if checknpcs
-	target_result = dothistimeout 'target random', 5, /^Could not find a valid target\.$|^You are now targeting/
-	if target_result =~ /^You are now targeting \w+ (.*)\.$/
-		ambush
-	elsif target_result == 'Could not find a valid target.'
-		start_script "sskin", ["target"]
-		wait_while{running?('sskin')}
+	target = GameObj.npcs.find { |npc| npc.status == 'dead' }
+	if target
+		start_script "sloot"
+		wait_while{running?('sloot')}
+	else
+		sleep 0.1
 	end
-end
-end
-
-def jkill
-	if checknpcs
-	target_result = dothistimeout 'target random', 5, /^Could not find a valid target\.$|^You are now targeting/
-	if target_result =~ /^You are now targeting \w+ (.*)\.$/
-		cmd_mstrike
-	elsif target_result == 'Could not find a valid target.'
-		start_script "sskin", ["target"]
-		wait_while{running?('sskin')}
-	end
-end
 end
 
 def ekill
@@ -439,17 +305,13 @@ def ekill
 end
 
 def pkill
-	while true
-		poaching
-		if !@someone_here
-			cmd_gos
+	loop {
+    cmd_gos
+
+		if !poaching
 
 			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
-			valid_loot = /(rat|rolton)/i
-			target = nil
-			@target = nil
-			cmd_target
-			target = @target
+			target = cmd_target
 			if target
 				cmd_gos
 				cmd_smastery
@@ -465,63 +327,18 @@ def pkill
 #			cmd_loot
 			end
 		end
-		sleep 1.0
-	end
-end
-
-def bkill
-	poaching
-	if !@someone_here
-
-		@valid_targets = /(rat|great boar|black bear|manticore|black bear|hill troll|war troll|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|banshee|troll king|dweller|harbinger|steed|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|solldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder)/i
-		valid_loot = /(rat|rolton)/i
-		target = nil
-		@target = nil
-		cmd_target
-		target = @target
-		if target
-			cmd_smastery
-			cmd_hide
-			cmd_ambush target
-	#		cmd_kill target
-		else
-			cmd_loot
-		end
-	end
-end
-
-def pokill
-	poaching
-	if !@someone_here
-
-		@valid_targets = /(rat|great boar|black bear|manticore|black bear|hill troll|war troll|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|banshee|troll king|dweller|harbinger|steed|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder)/i
-		valid_loot = /(rat|rolton)/i
-		target = nil
-		@target = nil
-		cmd_target
-		target = @target
-		if target
-			cmd_gos
-			cmd_kill target
-		else
-			cmd_loot
-		end
-	end
+		sleep 0.5
+	}
 end
 
 def alyskill
-	while true
+	loop {
 		cmd_gos
 
-		poaching
-		if !@someone_here
+		if !poaching
 
 			@valid_targets = /(warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|janissary|herald|griffin|scout|adept|lurk|fanatic|monstrosity|shaper|sentinel|lesser minotaur|krag yeti|minotaur warrior|minotaur magus|jarl|krynch|elder|being|goleras|moulis|shrickhen|champion|seer|initiate|dogmatist|hierophant|supplicant)/i
-			valid_loot = /(rat|rolton)/i
-			target = nil
-			@target = nil
-			cmd_target
-			target = @target
+			target = cmd_target
 			if target
 				cmd_gos
 			#	cmd_bind target
@@ -530,29 +347,19 @@ def alyskill
 				cmd_power
 			else
 				cmd_loot
-				end
 			end
-			sleep 0.5
 		end
-	end
+		sleep 0.5
+	}
+end
 
 def archkill
-	echo "start"
-	while true
-#		echo "while true"
-		poaching
-		if !@someone_here
-#			echo "after poaching"
-
-			cmd_voln
+	loop {
+    cmd_voln
+		if !poaching
 
 			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
-			valid_loot = /(rat|rolton)/i
-			target = nil
-			@target = nil
-			cmd_target
-			target = @target
-#			echo "target"
+			target = cmd_target
 			if target
 				cmd_vibration target
 				cmd_kill target
@@ -561,7 +368,7 @@ def archkill
 			end
 		end
 		sleep 0.5
-	end
+	}
 end
 
 toggle_upstream
@@ -579,21 +386,14 @@ command_thread = Thread.new {
 
 loop {
 	stand
-	if name == 'Jrad'
-		jkill
-	elsif name == 'Alyssea'
-		alyskill
-	elsif name == 'Archaeron'
+  case name
+  when 'Alyssea'
+    alyskill
+	when 'Archaeron'
 		archkill
-	elsif name == 'Ryck'
-		rkill
-	elsif name == 'Predest'
+	when 'Predest'
 		pkill
-	elsif name == 'Baalico'
-		bkill
-	elsif name == 'Poainis'
-		pokill
-	elsif name == 'Ericos'
+	when 'Ericos'
 		ekill
 	end
 	sleep 1.0
