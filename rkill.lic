@@ -346,10 +346,9 @@ def alyskill
 				cmd_power
 			else
 				cmd_loot
-				end
 			end
-			sleep 0.5
-    end
+		end
+		sleep 0.5
 	}
 end
 
