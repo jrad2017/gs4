@@ -2,8 +2,12 @@
 Script for hunting with Ericos et al.
 =end
 
+#These people are always considered part of the group, regardless of membership
 @core_group = ["Ericos", "Predest", "Alyssea", "Archaeron", "Draccor", "Naina", "Szyxt"]
+#Default set of NPC types to consider attack
 @target_types = /aggressive npc|undead|bandit|grimswarm/
+#Default set of NPCs to target
+@valid_targets = //
 
 def name
 	#Function to get active character name
@@ -25,8 +29,12 @@ def get_current_group
 	group
 end
 
-@current_group = get_current_group
 @group_mutex = Mutex.new
+@current_mutex = Mutex.new
+
+@group_mutex.synchronize {
+	@current_group = get_current_group
+}
 
 def poaching
 	#Test if someone in the room is unexpected, to avoid poaching
@@ -57,6 +65,7 @@ def change_stance new_stance, force: true
 end
 
 def stand
+	#Goes defensive, then stands
 	until(standing?)
 		change_stance('defensive')
 		fput 'stand'
@@ -274,8 +283,8 @@ def cmd_bind target
 	}
 end
 
-def cmd_target
-	target = GameObj.npcs.find { |npc| is_valid_target npc }
+def cmd_target valid_targets
+	target = GameObj.npcs.find { |npc| is_valid_target npc, valid_targets: valid_targets }
 	if target
 		fput "target ##{target.id}"
 	end
@@ -300,101 +309,145 @@ def cmd_loot
 	end
 end
 
-def ekill
-	cmd_col
+def print_profile_info pname, profile
+	#Pretty printer for profile commands
+  respond "#{pname} is set to: "
+  profile.each_with_index { |cmd, ii|
+    respond "  #{ii + 1}) #{cmd}"
+  }
 end
 
-def pkill
+def execute_profile valid_targets
+	#This defines the core hunting loop for all characters, executing a sequence of functions from a specified profile
 	loop {
-    cmd_gos
+		#Rebuild list of commands each loop, for on-the-fly profile switches
+		profile = []
+		@current_mutex.synchronize {
+			profile = Vars[:rkill][name][:current]
+		}
+		cmds = profile.collect {|cmd|
+			method(cmd)
+		}
+		#Not poaching, valid commands
+		if !poaching && cmds
+			target = cmd_target valid_targets
 
-		if !poaching
-
-			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
-			target = cmd_target
-			if target
-				cmd_gos
-				cmd_smastery
-		#		cmd_sounds target
-				cmd_weed target
-				cmd_swarm target
-		#		cmd_fury target
-				stand
-				cmd_camo
-				cmd_hide
-				cmd_ambush target
-			else
-#			cmd_loot
-			end
+			#Executes each command in order, providing target if requested
+			cmds.each{ |cmd|
+				args = Hash.new
+				if target && cmd.parameters.include? :target
+					args[:target] = target
+				end
+				cmd.call *args
+			}
 		end
+		# Always pause half a second to not spam commands too fast
 		sleep 0.5
 	}
 end
 
-def alyskill
-	loop {
-		cmd_gos
+#Sets up basic configuration structures
+Vars[:rkill] ||= Hash.new
+Vars[:rkill][name] ||= Hash.new
+Vars[:rkill][name][:profiles] ||= Hash.new
+Vars[:rkill][name][:current] ||= :default
 
-		if !poaching
+#This is the list of all commands which can be used in profiles. This is to ensure that incorrectly named or unexpected functions don't get injected
+@all_cmds = [:cmd_gos, :cmd_power, :cmd_loot, :cmd_voln, :cmd_vibration, :cmd_kill, :cmd_smastery, :cmd_camo, :cmd_hide, :cmd_ambush, :cmd_swarm, :cmd_weed, :cmd_col, :stand]
 
-			@valid_targets = /(warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|janissary|herald|griffin|scout|adept|lurk|fanatic|monstrosity|shaper|sentinel|lesser minotaur|krag yeti|minotaur warrior|minotaur magus|jarl|krynch|elder|being|goleras|moulis|shrickhen|champion|seer|initiate|dogmatist|hierophant|supplicant)/i
-			target = cmd_target
-			if target
-				cmd_gos
-			#	cmd_bind target
-			#	cmd_bone target
-			#	cmd_empathiclink target
-				cmd_power
-			else
-				cmd_loot
-			end
-		end
-		sleep 0.5
-	}
-end
-
-def archkill
-	loop {
-    cmd_voln
-		if !poaching
-
-			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
-			target = cmd_target
-			if target
-				cmd_vibration target
-				cmd_kill target
-			else
-			#	cmd_loot
-			end
-		end
-		sleep 0.5
-	}
+#Sets up default profiles for current characters, can be deleted once configured
+if !Vars[:rkill][name][:profiles].include? :default
+  case name
+  when "Alyssea"
+    Vars[:rkill][name][:profiles][:default] = [:cmd_gos, :cmd_power, :cmd_loot]
+  when "Archaeron"
+    Vars[:rkill][name][:profiles][:default] = [:cmd_voln, :cmd_vibration, :cmd_kill]
+  when "Predest"
+    Vars[:rkill][name][:profiles][:default] = [:cmd_gos, :cmd_smastery, :cmd_weed, :cmd_swarm, :stand, :cmd_camo, :cmd_hide, :cmd_ambush]
+  when "Ericos"
+    Vars[:rkill][name][:profiles][:default] = [:cmd_col]
+  end
 end
 
 toggle_upstream
 
+#Thread for accepting commands during operation
 command_thread = Thread.new {
 	loop {
 		line = upstream_get
-		if line =~ /#{$lich_char}#{script.name} update_group/
+		case line
+		when /#{$lich_char}#{script.name} update_group/
+			#Updates group for poaching tests
 			@group_mutex.synchronize {
 				@current_group = get_current_group
+			}
+		when /#{$lich_char}#{script.name} profile/
+			#Processes profile commands
+			@current_mutex.synchronize {
+				case line
+				when /profile list/
+					#List profiles for the current character
+					respond "Profiles available for #{name}:"
+					Vars[:rkill][name][:profiles].keys.each {|profile|
+						respond "* #{profile.to_s}"
+					}
+				when /profile set (?<pname>\w+)=(?<cmds>[\w, ]+)/
+					#Sets a profile to a string of commands
+					cmds = []
+					pname = $~[:pname].to_sym
+					$~[:cmds].split(",").each {|cmd|
+						cmd = cmd.strip.to_sym
+						if !@all_cmds.include? cmd
+							respond "#{cmd.to_s} not a recognized command"
+							break
+						end
+						cmds.push(cmd)
+					}
+					Vars[:rkill][name][:profiles][pname] = cmds
+					respond "Added profile #{pname.to_s} for #{name}"
+				when /profile rm (?<pname>\w+)/
+					#Removes a profile
+					pname = $~[:pname]
+					Vars[:rkill][name][:profiles].delete pname.to_sym
+					respond "Removed profile #{pname} for #{name}"
+				when /profile info (?<pname>\w+)/
+					pname = $~[:pname]
+					if Vars[:rkill][name][:profiles].include? pname.to_sym
+	          print_profile_info pname, Vars[:rkill][name][:profiles][pname.to_sym]
+					else
+						respond "#{pname} not a profile for #{name}"
+					end
+	      when /profile current/
+	        if line =~ /current (?<set>\w+)/ && $~[:set]
+	          Vars[:rkill][name][:current] = $~[:set]
+	        end
+	        respond "#{name} is using profile #{Vars[:rkill][name][:current]}"
+				when /profile help/
+					respond "Usage: #{$lich_char}#{script.name} profile [options]"
+					respond ""
+					respond "Options:"
+					respond "  list: Lists all known profiles for the current character"
+					respond "  set [profile=cmds]: Sets the named profile to the comma separated list of commands given"
+					respond "  rm profile_name: Deletes named profile"
+					respond "  info profile_name: Lists the command sequence of a given profile"
+					respond "  current [profile_name]: Lists the current profile, or sets it to the given name if specified"
+					respond "  help: Prints this help message"
+	      end
 			}
 		end
 	}
 }
 
-loop {
-	stand
-  case name
-  when 'Alyssea'
-    alyskill
-	when 'Archaeron'
-		archkill
-	when 'Predest'
-		pkill
-	when 'Ericos'
-		ekill
-	end
-	sleep 1.0
-}
+#Valid targets are listed here on a per-character basis
+valid_targets = //
+case name
+when 'Alyssea'
+  valid_targets = /(warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|janissary|herald|griffin|scout|adept|lurk|fanatic|monstrosity|shaper|sentinel|lesser minotaur|krag yeti|minotaur warrior|minotaur magus|jarl|krynch|elder|being|goleras|moulis|shrickhen|champion|seer|initiate|dogmatist|hierophant|supplicant)/i
+when 'Archaeron'
+	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
+when 'Predest'
+	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
+#when 'Ericos' #This isn't here, since Ericos never targets via this script
+end
+
+execute_commands valid_targets
