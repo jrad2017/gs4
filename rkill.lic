@@ -39,7 +39,7 @@ def poaching
 	GameObj.pcs.any? {|pc| pc.name !~ party_members}
 end
 
-def change_stance new_stance, force = true
+def change_stance new_stance, force: true
 	#return unless new_stance =~ /off/ # pookahs/bog
 	return if Spell[1617].active? || Spell[216].active? || dead?
 
@@ -63,7 +63,7 @@ def stand
 	end
 end
 
-def is_valid_target npc, valid_targets=@valid_targets, target_types=@target_types
+def is_valid_target npc, valid_targets:@valid_targets, target_types:@target_types
   #Function which determines if an NPC is a valid target for combat
   npc.name =~ valid_targets and npc.status !~ /dead|gone/i and npc.type =~ target_types
 end
@@ -286,7 +286,7 @@ def cmd_sympathy
   #Cast sympathy if enough creatures are present
   sympathy = Spell[1120]
   return unless sympathy.known? and sympathy.affordable?
-  return if GameObj.npcs.count { |npc| is_valid_target npc, target_types=/bandit/ } < 6
+  return if GameObj.npcs.count { |npc| is_valid_target npc, target_types:/bandit/ } < 6
   sympathy.cast
 end
 
