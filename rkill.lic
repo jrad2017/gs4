@@ -68,7 +68,7 @@ def is_valid_target npc, valid_targets=@valid_targets, target_types=@target_type
   npc.name =~ valid_targets and npc.status !~ /dead|gone/i and npc.type =~ target_types
 end
 
-def maintain_spells spells, min_mana = -1, max_mana = -1
+def maintain_spells spells, min_mana: -1, max_mana: -1
   #Ensures that all given spells are active, and casts to refresh them, assuming spells are affordable.
   return if spells.all? {|spell| spell.active?}
   return if min_mana >= 0 and checkmana <= min_mana
@@ -85,19 +85,19 @@ end
 
 def cmd_gos
   sigils = [Spell[9705], Spell[9707], Spell[9708], Spell[9710]]
-	maintain_spells sigils, 15
+	maintain_spells sigils, min_mana: 15
 end
 
 def cmd_power
     power = [Spell[9718]]
-    maintain_spells power, max_mana = 100
+    maintain_spells power, max_mana: 100
     # Pause to ensure lich can track stamina/mana
     pause 0.5
 end
 
 def cmd_col
     signs = [Spell[9904], Spell[9907], Spell[9908], Spell[9912], Spell[9913]]
-    maintain_spells signs, 5
+    maintain_spells signs, min_mana: 5
 end
 
 def cmd_voln
@@ -166,7 +166,7 @@ end
 
 def cmd_camo
 	return if(hiding?)
-  maintain_spells [Spell[608]], 15
+  maintain_spells [Spell[608]], min_mana: 15
 end
 
 
