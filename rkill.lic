@@ -337,7 +337,7 @@ def pkill
 #			cmd_loot
 			end
 		end
-		sleep 1.0
+		sleep 0.5
 	}
 end
 
