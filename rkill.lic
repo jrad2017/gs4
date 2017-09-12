@@ -66,9 +66,9 @@ def stand
 	end
 end
 
-def is_valid_target npc
+def is_valid_target npc, valid_targets=@valid_targets, target_types=@target_types
   #Function which determines if an NPC is a valid target for combat
-  npc.name =~ @valid_targets and npc.status !~ /dead|gone/i and npc.type =~ @target_types
+  npc.name =~ valid_targets and npc.status !~ /dead|gone/i and npc.type =~ target_types
 end
 
 def maintain_spells spells, min_mana = -1, max_mana = -1
@@ -286,6 +286,14 @@ def cmd_target
 				fput "target ##{target.id}"
 			end
 	end
+end
+
+def cmd_sympathy
+  #Cast sympathy if enough creatures are present
+  sympathy = Spell[1120]
+  return unless sympathy.known? and sympathy.affordable?
+  return if GameObj.npcs.count { |npc| is_valid_target npc, target_types=/bandit/ } < 6
+  sympathy.cast
 end
 
 def cmd_loot
