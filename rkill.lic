@@ -7,7 +7,7 @@ Script for hunting with Ericos et al.
 
 def name
 	#Function to get active character name
-	return Char.name
+	Char.name
 end
 
 def get_current_group
@@ -30,16 +30,13 @@ end
 
 def poaching
 	#Test if someone in the room is unexpected, to avoid poaching
-	@someone_here = false
 	#Get minimal list of names to care about
 		pcs = Set.new @core_group
 		@group_mutex.synchronize {
 			pcs.merge @current_group
 		}
 	party_members = Regexp.new pcs.to_a.join("|")
-	@someone_here = GameObj.pcs.any? {|pc| pc.name !~ party_members}
-#	echo @someone_here
-#	echo @current_group
+	GameObj.pcs.any? {|pc| pc.name !~ party_members}
 end
 
 def change_stance new_stance, force = true
@@ -309,8 +306,8 @@ end
 def pkill
 	loop {
     cmd_gos
-		poaching
-		if !@someone_here
+
+		if !poaching
 
 			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
 			target = cmd_target
@@ -336,8 +333,8 @@ end
 def alyskill
 	loop {
 		cmd_gos
-		poaching
-		if !@someone_here
+
+		if !poaching
 
 			@valid_targets = /(warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|janissary|herald|griffin|scout|adept|lurk|fanatic|monstrosity|shaper|sentinel|lesser minotaur|krag yeti|minotaur warrior|minotaur magus|jarl|krynch|elder|being|goleras|moulis|shrickhen|champion|seer|initiate|dogmatist|hierophant|supplicant)/i
 			target = cmd_target
@@ -359,8 +356,7 @@ end
 def archkill
 	loop {
     cmd_voln
-		poaching
-		if !@someone_here
+		if !poaching
 
 			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
 			target = cmd_target
