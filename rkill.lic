@@ -317,7 +317,7 @@ def print_profile_info pname, profile
   }
 end
 
-def execute_profile valid_targets
+def execute_commands valid_targets
 	#This defines the core hunting loop for all characters, executing a sequence of functions from a specified profile
 	loop {
 		#Rebuild list of commands each loop, for on-the-fly profile switches
@@ -325,7 +325,7 @@ def execute_profile valid_targets
 		@current_mutex.synchronize {
 			profile = Vars[:rkill][name][:current]
 		}
-		cmds = profile.collect {|cmd|
+		cmds = profile.collect { |cmd|
 			method(cmd)
 		}
 		#Not poaching, valid commands
