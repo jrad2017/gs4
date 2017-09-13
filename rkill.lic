@@ -50,12 +50,8 @@ end
 def change_stance new_stance, force: true
 	#return unless new_stance =~ /off/ # pookahs/bog
 	return if Spell[1617].active? || Spell[216].active? || dead?
-
-	if stance() =~ /#{new_stance}/
-		return
-	elsif checkcastrt() > 0 && new_stance =~ /def/
-		return if stance() == 'guarded'
-	end
+	return if checkstance new_stance
+	return if checkcastrt > 0 && new_stance =~ /def/ && checkstance "guarded"
 
 	if(force)
 		result = dothistimeout( "stance #{new_stance}", 3, /You are now in an?|Cast Round Time in effect|You are unable to change/ )
@@ -134,8 +130,7 @@ end
 
 def cmd_swarm target
 	return if target.status =~ /dead|gone/
-	return if GameObj.loot.find { |loot| loot.name =~ /swarm/ }
-	return if GameObj.loot.find { |loot| loot.name =~ /vine/ }
+	return if GameObj.loot.find { |loot| loot.name =~ /swarm|vine/ }
 	return unless Spell[615].known? and Spell[615].affordable?
 	return if target.name =~ /lava golem|skayl|banshee|stone troll|stone giant/i
 	return if checkmana <= 140
