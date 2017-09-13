@@ -128,7 +128,7 @@ loop{
 				multifput "prep 1012", "sing #{weapon_noun}"
 				weapon = GameObj.right_hand.id
 			else
-				attempt_recover weapon
+				attempt_recovery weapon
 				swap_okay = GameObj.right_hand.id == weapon
 				if !swap_okay && room != nil && Vars[script.name]['run']
 					stop_script 'go2' if running? 'go2'
@@ -138,7 +138,7 @@ loop{
 					start_script "go2", [room] if Room.current.id != room && room != nil
 					wait_while{ running?('go2') }
 					waitrt?
-					attempt_recover weapon
+					attempt_recovery weapon
 					swap_okay = true
 					wait_until {GameObj.right_hand.id == weapon}
 				elsif !swap_okay
