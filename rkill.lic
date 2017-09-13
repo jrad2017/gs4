@@ -123,7 +123,7 @@ def cmd_fury target
 	return if GameObj.npcs.count { |npc| is_valid_target npc } < 5
 
 	waitcastrt?
-	Spell[635].cast("#{target}")
+	Spell[635].cast "##{target.id}"
 	change_stance('guarded')
 	waitcastrt?
 end
@@ -138,7 +138,7 @@ def cmd_swarm target
 
 	waitcastrt?
 	change_stance('offensive')
-	Spell[615].cast("#{target}")
+	Spell[615].cast "##{target.id}"
 	change_stance('guarded')
 	waitcastrt?
 end
@@ -153,7 +153,7 @@ def cmd_weed target
 
 	waitcastrt?
 	change_stance('offensive')
-	Spell[610].cast("#{target}")
+	Spell[610].cast "##{target.id}"
 	change_stance('guarded')
 	waitcastrt?
 end
@@ -163,7 +163,7 @@ def cmd_sounds target
 	return unless Spell[607].known? and Spell[607].affordable?
 
 	waitcastrt?
-	Spell[607].cast("#{target}")
+	Spell[607].cast "##{target.id}"
 	waitcastrt?
 end
 
@@ -240,7 +240,7 @@ def cmd_vibration target
 	return if checkmana <= 45
 
 	waitcastrt?
-	Spell[1002].cast("#{target}")
+	Spell[1002].cast "##{target.id}"
 	waitcastrt?
 end
 
@@ -249,7 +249,8 @@ def cmd_bone target
 	return unless Spell[1106].known? and Spell[1106].affordable?
 
 		waitcastrt?
-		multifput "incant 1106", "stance defensive"
+		Spell[1106].cast "##{target.id}"
+		change_stance "defensive"
 		waitcastrt?
 end
 
@@ -260,7 +261,7 @@ def cmd_empathiclink target
 	return if GameObj.npcs.count { |npc| is_valid_target npc } < 4
 
 	waitcastrt?
-	Spell[1117].cast("#{target}")
+	Spell[1117].cast "##{target.id}"
 	change_stance('guarded')
 	waitcastrt?
 end
