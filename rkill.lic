@@ -323,8 +323,8 @@ def execute_commands valid_targets
 		#Rebuild list of commands each loop, for on-the-fly profile switches
 		profile = []
 		@current_mutex.synchronize {
-			current = Vars[:rkill][:current]
-			profile = Vars[:rkill][:profiles][current]
+			current = Vars['rkill'][:current]
+			profile = Vars['rkill'][:profiles][current]
 		}
 		cmds = profile.collect { |cmd|
 			method(cmd)
@@ -348,25 +348,25 @@ def execute_commands valid_targets
 end
 
 #Sets up basic configuration structures
-Vars[:rkill] ||= Hash.new
-Vars[:rkill] ||= Hash.new
-Vars[:rkill][:profiles] ||= Hash.new
-Vars[:rkill][:current] ||= :default
+Vars['rkill'] ||= Hash.new
+Vars['rkill'] ||= Hash.new
+Vars['rkill'][:profiles] ||= Hash.new
+Vars['rkill'][:current] ||= :default
 
 #This is the list of all commands which can be used in profiles. This is to ensure that incorrectly named or unexpected functions don't get injected
 @all_cmds = [:cmd_gos, :cmd_power, :cmd_loot, :cmd_voln, :cmd_vibration, :cmd_kill, :cmd_smastery, :cmd_camo, :cmd_hide, :cmd_ambush, :cmd_swarm, :cmd_weed, :cmd_col, :stand]
 
 #Sets up default profiles for current characters, can be deleted once configured
-if !Vars[:rkill][:profiles].include? :default
+if !Vars['rkill'][:profiles].include? :default
   case name
   when "Alyssea"
-    Vars[:rkill][:profiles][:default] = [:cmd_gos, :cmd_power, :cmd_loot]
+    Vars['rkill'][:profiles][:default] = [:cmd_gos, :cmd_power, :cmd_loot]
   when "Archaeron"
-    Vars[:rkill][:profiles][:default] = [:cmd_voln, :cmd_vibration, :cmd_kill]
+    Vars['rkill'][:profiles][:default] = [:cmd_voln, :cmd_vibration, :cmd_kill]
   when "Predest"
-    Vars[:rkill][:profiles][:default] = [:cmd_gos, :cmd_smastery, :cmd_weed, :cmd_swarm, :stand, :cmd_camo, :cmd_hide, :cmd_ambush]
+    Vars['rkill'][:profiles][:default] = [:cmd_gos, :cmd_smastery, :cmd_weed, :cmd_swarm, :stand, :cmd_camo, :cmd_hide, :cmd_ambush]
   when "Ericos"
-    Vars[:rkill][:profiles][:default] = [:cmd_col]
+    Vars['rkill'][:profiles][:default] = [:cmd_col]
   end
 end
 
@@ -389,7 +389,7 @@ command_thread = Thread.new {
 				when /profile list/
 					#List profiles for the current character
 					respond "Profiles available for #{name}:"
-					Vars[:rkill][:profiles].keys.each {|profile|
+					Vars['rkill'][:profiles].keys.each {|profile|
 						respond "* #{profile.to_s}"
 					}
 				when /profile set (?<pname>\w+)=(?<cmds>[\w, ]+)/
@@ -404,25 +404,25 @@ command_thread = Thread.new {
 						end
 						cmds.push(cmd)
 					}
-					Vars[:rkill][:profiles][pname] = cmds
+					Vars['rkill'][:profiles][pname] = cmds
 					respond "Added profile #{pname.to_s} for #{name}"
 				when /profile rm (?<pname>\w+)/
 					#Removes a profile
 					pname = $~[:pname]
-					Vars[:rkill][:profiles].delete pname.to_sym
+					Vars['rkill'][:profiles].delete pname.to_sym
 					respond "Removed profile #{pname} for #{name}"
 				when /profile info (?<pname>\w+)/
 					pname = $~[:pname]
-					if Vars[:rkill][:profiles].include? pname.to_sym
-	          print_profile_info pname, Vars[:rkill][:profiles][pname.to_sym]
+					if Vars['rkill'][:profiles].include? pname.to_sym
+	          print_profile_info pname, Vars['rkill'][:profiles][pname.to_sym]
 					else
 						respond "#{pname} not a profile for #{name}"
 					end
 	      when /profile current/
 	        if line =~ /current (?<set>\w+)/ && $~[:set]
-	          Vars[:rkill][:current] = $~[:set]
+	          Vars['rkill'][:current] = $~[:set]
 	        end
-	        respond "#{name} is using profile #{Vars[:rkill][:current]}"
+	        respond "#{name} is using profile #{Vars['rkill'][:current]}"
 				when /profile help/
 					respond "Usage: #{$lich_char}#{script.name} profile [options]"
 					respond ""
