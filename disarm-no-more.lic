@@ -141,10 +141,10 @@ loop{
 					waitrt?
 					attempt_recovery weapon
 					swap_okay = true
-					wait_until {GameObj.right_hand.id == weapon}
 				elsif !swap_okay
 					fput "recite I appear to have lost my #{weapon_noun} somewhere near #{room}.;Help!"
 				end
+				wait_until {GameObj.right_hand.id == weapon}
 			end
 		end
 		room = nil
@@ -155,28 +155,28 @@ loop{
 			sleep 0.3
 		end
 		if GameObj.left_hand.id != off_hand && have_off_hand
-				if off_hand_name =~ /sonic/i
+			if off_hand_name =~ /sonic/i
+				waitrt?
+				waitcastrt?
+				multifput "prep 1009", "sing #{off_hand_noun}"
+				off_hand = GameObj.left_hand.id
+			else
 				attempt_recovery off_hand
+				swap_okay = GameObj.left_hand.id == off_hand
 				if !swap_okay && off_hand_room != nil && Vars["#{script.name}-run"] != "0"
+					stop_script 'go2' if running? 'go2'
+					stop_script 'wander' if running? 'wander'
+					echo "Last time you were holding your weapon was in or around room number #{room}." if room != nil && have_weapon
+					echo "Last time you were holding your shield/off hand was in or around room number #{off_hand_room}." if off_hand_room != nil && have_off_hand
+					start_script "go2", [off_hand_room] if Room.current.id != off_hand_room && off_hand_room != nil
+					wait_while{ running?('go2') }
 					waitrt?
-					waitcastrt?
-					multifput "prep 1009", "sing #{off_hand_noun}"
-					off_hand = GameObj.left_hand.id
-				else
-					swap_okay = GameObj.left_hand.id == off_hand
-						stop_script 'go2' if running? 'go2'
-						stop_script 'wander' if running? 'wander'
-						echo "Last time you were holding your weapon was in or around room number #{room}." if room != nil && have_weapon
-						echo "Last time you were holding your shield/off hand was in or around room number #{off_hand_room}." if off_hand_room != nil && have_off_hand
-						start_script "go2", [off_hand_room] if Room.current.id != off_hand_room && off_hand_room != nil
-						wait_while{ running?('go2') }
-						waitrt?
-						swap_okay = true
-						wait_until { GameObj.left_hand.id == off_hand}
-					elsif !swap_okay
-						fput "recite I appear to have lost my #{off_hand_name} near #{room}.;Help!"
 					attempt_recovery off_hand
+					swap_okay = true
+				elsif !swap_okay
+					fput "recite I appear to have lost my #{off_hand_name} near #{off_hand_room}.;Help!"
 				end
+				wait_until { GameObj.left_hand.id == off_hand}
 			end
 		end
 		off_hand_room = nil
