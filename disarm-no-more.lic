@@ -154,7 +154,6 @@ loop{
 			sleep 0.3
 		end
 		if GameObj.left_hand.id != off_hand && have_off_hand
-			if GameObj.left_hand.id != off_hand && have_off_hand
 				if off_hand_name =~ /sonic/i
 					waitrt?
 					waitcastrt?
@@ -176,7 +175,6 @@ loop{
 						wait_until { GameObj.left_hand.id == off_hand}
 					elsif !swap_okay
 						fput "recite I appear to have lost my #{off_hand_name} near #{room}.;Help!"
-					end
 				end
 			end
 		end
