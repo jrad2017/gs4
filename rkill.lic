@@ -130,7 +130,7 @@ end
 
 def cmd_swarm target
 	return if target.status =~ /dead|gone/
-	return if GameObj.loot.find { |loot| loot.name =~ /swarm|vine/ }
+	return if GameObj.loot.find { |loot| loot.name =~ /swarm$|vine$/ }
 	return unless Spell[615].known? and Spell[615].affordable?
 	return if target.name =~ /lava golem|skayl|banshee|stone troll|stone giant/i
 	return if checkmana <= 140
@@ -146,7 +146,7 @@ end
 def cmd_weed target
 	return if target.status =~ /dead|gone/
 	#TODO: Make this more intelligent about detecting enemy vines
-	return if GameObj.loot.find { |loot| loot.name =~ /vine$/ }
+	return if GameObj.loot.find { |loot| loot.name =~ /swarm$|vine$/ }
 	return unless Spell[610].known? and Spell[610].affordable?
 	return if target.name =~ /lava golem|skayl|banshee/i
 	return if checkmana <= 140
