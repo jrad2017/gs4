@@ -301,7 +301,7 @@ def cmd_loot
 	#Must have at least one creature present
 	return if GameObj.npcs.count { |npc| npc.type =~ @target_types } == 0
 	#All NPCs must be non-aggressive, or dead
-	return unless GameObj.npcs.all { |npc| npc.type !~ @target_types || npc.status =~ /dead|gone/ }
+	return unless GameObj.npcs.all? { |npc| npc.type !~ @target_types || npc.status =~ /dead|gone/ }
 	start_script "sloot"
 	wait_while{running?('sloot')}
 end
