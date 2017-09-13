@@ -325,6 +325,7 @@ def execute_commands valid_targets
 			current = Vars[@script_name]['current']
 			profile = Vars[@script_name]['profiles'][current].dup
 		}
+		cmds = []
 		if profile != last_profile
 			select_target = false
 			cmds = profile.collect { |cmd|
