@@ -375,76 +375,84 @@ if !Vars['rkill']['profiles'].include? 'default'
   end
 end
 
-toggle_upstream
-
-#Thread for accepting commands during operation
-command_thread = Thread.new {
-	loop {
-		line = upstream_get
+def handle_profile_cmds line
+	#Processes profile commands
+	@current_mutex.synchronize {
 		case line
-		when /#{$lich_char}#{script.name} update_group/
-			#Updates group for poaching tests
-			@group_mutex.synchronize {
-				@current_group = get_current_group
+		when /profile list/
+			#List profiles for the current character
+			respond "Profiles available for #{name}:"
+			Vars['rkill']['profiles'].keys.each {|profile|
+				respond "* #{profile}"
 			}
-		when /#{$lich_char}#{script.name} commands/
-			respond "Available commands: #{@all_cmds}"
-		when /#{$lich_char}#{script.name} profile/
-			#Processes profile commands
-			@current_mutex.synchronize {
-				case line
-				when /profile list/
-					#List profiles for the current character
-					respond "Profiles available for #{name}:"
-					Vars['rkill']['profiles'].keys.each {|profile|
-						respond "* #{profile}"
-					}
-				when /profile set (?<pname>\w+)=(?<cmds>[\w, ]+)/
-					#Sets a profile to a string of commands
-					cmds = []
-					pname = $~[:pname]
-					$~[:cmds].split(",").each { |cmd|
-						cmd = cmd.strip
-						if !@all_cmds.include? cmd
-							respond "#{cmd} not a recognized command"
-							break
-						end
-						cmds.push(cmd)
-					}
-					Vars['rkill']['profiles'][pname] = cmds
-					respond "Added profile #{pname} for #{name}"
-				when /profile rm (?<pname>\w+)/
-					#Removes a profile
-					pname = $~[:pname]
-					Vars['rkill']['profiles'].delete pname
-					respond "Removed profile #{pname} for #{name}"
-				when /profile info (?<pname>\w+)/
-					pname = $~[:pname]
-					if Vars['rkill']['profiles'].include? pname
-	          print_profile_info pname, Vars['rkill']['profiles'][pname]
-					else
-						respond "#{pname} not a profile for #{name}"
-					end
-	      when /profile current/
-	        if line =~ /current (?<set>\w+)/ && $~[:set]
-	          Vars['rkill']['current'] = $~[:set]
-	        end
-	        respond "#{name} is using profile #{Vars['rkill']['current']}"
-				when /profile help/
-					respond "Usage: #{$lich_char}#{script.name} profile [options]"
-					respond ""
-					respond "Options:"
-					respond "  list: Lists all known profiles for the current character"
-					respond "  set [profile=cmds]: Sets the named profile to the comma separated list of commands given"
-					respond "  rm profile_name: Deletes named profile"
-					respond "  info profile_name: Lists the command sequence of a given profile"
-					respond "  current [profile_name]: Lists the current profile, or sets it to the given name if specified"
-					respond "  help: Prints this help message"
-	      end
+		when /profile set (?<pname>\w+)=(?<cmds>[\w, ]+)/
+			#Sets a profile to a string of commands
+			cmds = []
+			pname = $~[:pname]
+			$~[:cmds].split(",").each { |cmd|
+				cmd = cmd.strip
+				if !@all_cmds.include? cmd
+					respond "#{cmd} not a recognized command"
+					break
+				end
+				cmds.push(cmd)
 			}
+			Vars['rkill']['profiles'][pname] = cmds
+			respond "Added profile #{pname} for #{name}"
+		when /profile rm (?<pname>\w+)/
+			#Removes a profile
+			pname = $~[:pname]
+			Vars['rkill']['profiles'].delete pname
+			respond "Removed profile #{pname} for #{name}"
+		when /profile info (?<pname>\w+)/
+			pname = $~[:pname]
+			if Vars['rkill']['profiles'].include? pname
+				print_profile_info pname, Vars['rkill']['profiles'][pname]
+			else
+				respond "#{pname} not a profile for #{name}"
+			end
+		when /profile current/
+			if line =~ /current (?<set>\w+)/ && $~[:set]
+				Vars['rkill']['current'] = $~[:set]
+			end
+			respond "#{name} is using profile #{Vars['rkill']['current']}"
+		when /profile help/
+			respond "Usage: #{$lich_char}#{script.name} profile [options]"
+			respond ""
+			respond "Options:"
+			respond "  list: Lists all known profiles for the current character"
+			respond "  set [profile=cmds]: Sets the named profile to the comma separated list of commands given"
+			respond "  rm profile_name: Deletes named profile"
+			respond "  info profile_name: Lists the command sequence of a given profile"
+			respond "  current [profile_name]: Lists the current profile, or sets it to the given name if specified"
+			respond "  help: Prints this help message"
 		end
 	}
+end
+
+#Thread for accepting commands during operation
+command_hook = proc { |line|
+	case line
+	when /update_group/
+		#Updates group for poaching tests
+		@group_mutex.synchronize {
+			@current_group = get_current_group
+		}
+		nil
+	when /commands/
+		respond "Available commands: #{@all_cmds}"
+		nil
+	when /profile/
+		handle_profile_cmds line
+		nil
+	else
+		line
+	end
 }
+
+cmd_string = "#{$lich_char}#{script.name}"
+UpstreamHook.add cmd_string, command_hook
+before_dying {UpstreamHook.remove cmd_string}
 
 #Valid targets are listed here on a per-character basis
 valid_targets = //
