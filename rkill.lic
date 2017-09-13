@@ -9,6 +9,8 @@ Script for hunting with Ericos et al.
 #Default set of NPCs to target
 @valid_targets = //
 
+@script_name = script.name
+
 def name
 	#Function to get active character name
 	Char.name
@@ -319,8 +321,8 @@ def execute_commands valid_targets
 		#Rebuild list of commands each loop, for on-the-fly profile switches
 		profile = []
 		@vars_mutex.synchronize {
-			current = Vars[script.name]['current']
-			profile = Vars[script.name]['profiles'][current].dup
+			current = Vars[@script_name]['current']
+			profile = Vars[@script_name]['profiles'][current].dup
 		}
 		select_target = false
 		cmds = profile.collect { |cmd|
@@ -357,26 +359,26 @@ end
 
 #NOTE: At this point, only one thread is messing with these vars, so there's no need to mutex.
 #Sets up basic configuration structures
-Vars[script.name] ||= Hash.new
-Vars[script.name] ||= Hash.new
-Vars[script.name]['profiles'] ||= Hash.new
-Vars[script.name]['current'] ||= 'default'
+Vars[@script_name] ||= Hash.new
+Vars[@script_name] ||= Hash.new
+Vars[@script_name]['profiles'] ||= Hash.new
+Vars[@script_name]['current'] ||= 'default'
 
 #Sets up default profiles for current characters, can be deleted once configured
-if !Vars[script.name]['profiles'].include? 'default'
+if !Vars[@script_name]['profiles'].include? 'default'
   case name
   when "Alyssea"
-    Vars[script.name]['profiles']['default'] = ['cmd_gos', 'cmd_power', 'cmd_loot']
+    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'cmd_power', 'cmd_loot']
   when "Archaeron"
-    Vars[script.name]['profiles']['default'] = ['cmd_voln', 'cmd_vibration', 'cmd_kill']
+    Vars[@script_name]['profiles']['default'] = ['cmd_voln', 'cmd_vibration', 'cmd_kill']
   when "Predest"
-    Vars[script.name]['profiles']['default'] = ['cmd_gos', 'cmd_smastery', 'cmd_weed', 'cmd_swarm', 'stand', 'cmd_camo', 'cmd_hide', 'cmd_ambush']
+    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'cmd_smastery', 'cmd_weed', 'cmd_swarm', 'stand', 'cmd_camo', 'cmd_hide', 'cmd_ambush']
   when "Ericos"
-    Vars[script.name]['profiles']['default'] = ['cmd_col']
+    Vars[@script_name]['profiles']['default'] = ['cmd_col']
   end
 end
 
-cmd_string = "#{$lich_char}#{script.name}"
+cmd_string = "#{$lich_char}#{@script_name}"
 
 def handle_profile_cmds line
 	#Processes profile commands
@@ -385,7 +387,7 @@ def handle_profile_cmds line
 		#List profiles for the current character
 		respond "Profiles available for #{name}:"
 		@vars_mutex.synchronize {
-			Vars[script.name]['profiles'].keys.each {|profile|
+			Vars[@script_name]['profiles'].keys.each {|profile|
 				respond "* #{profile}"
 			}
 		}
@@ -401,27 +403,27 @@ def handle_profile_cmds line
 			end
 			cmds.push(cmd)
 		}
-		@vars_mutex.synchronize { Vars[script.name]['profiles'][pname] = cmds }
+		@vars_mutex.synchronize { Vars[@script_name]['profiles'][pname] = cmds }
 		respond "Added profile #{pname} for #{name}"
 	when /profile rm (?<pname>\w+)/
 		#Removes a profile
 		pname = $~[:pname]
-		@vars_mutex.synchronize { Vars[script.name]['profiles'].delete pname }
+		@vars_mutex.synchronize { Vars[@script_name]['profiles'].delete pname }
 		respond "Removed profile #{pname} for #{name}"
 	when /profile info (?<pname>\w+)/
 		pname = $~[:pname]
 		@vars_mutex.synchronize {
-			if Vars[script.name]['profiles'].include? pname
-				print_profile_info pname, Vars[script.name]['profiles'][pname]
+			if Vars[@script_name]['profiles'].include? pname
+				print_profile_info pname, Vars[@script_name]['profiles'][pname]
 			else
 				respond "#{pname} not a profile for #{name}"
 			end
 		}
 	when /profile current/
 		if line =~ /current (?<set>\w+)/ && $~[:set]
-			@vars_mutex.synchronize { Vars[script.name]['current'] = $~[:set] }
+			@vars_mutex.synchronize { Vars[@script_name]['current'] = $~[:set] }
 		end
-		respond "#{name} is using profile #{Vars[script.name]['current']}"
+		respond "#{name} is using profile #{Vars[@script_name]['current']}"
 	when /profile help/
 		respond "Usage: #{cmd_string} profile [options]"
 		respond ""
