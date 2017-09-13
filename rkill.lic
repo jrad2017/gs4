@@ -173,17 +173,19 @@ def cmd_sounds target
 
 end
 
-def cmd_camo
+def cmd_camo target
 	return if(hiding?)
+	return if target.status =~ /dead|gone/
   maintain_spells [Spell[608]], min_mana: 15
 end
 
 
-def cmd_hide
+def cmd_hide target
 	return if(hiding?)
+	return if target.status =~ /dead|gone/
 	fput "hide"
-		waitrt?
-		if matchtimeout 1, "You attempt to blend with the surroundings"
+	waitrt?
+	if matchtimeout 1, "You attempt to blend with the surroundings"
 		sleep 0.1
 	end
 end
