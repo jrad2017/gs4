@@ -317,6 +317,7 @@ end
 def execute_commands valid_targets
 	#This defines the core hunting loop for all characters, executing a sequence of functions from a specified profile
 	target = nil
+	last_profile = nil
 	loop {
 		#Rebuild list of commands each loop, for on-the-fly profile switches
 		profile = []
@@ -324,14 +325,15 @@ def execute_commands valid_targets
 			current = Vars[@script_name]['current']
 			profile = Vars[@script_name]['profiles'][current].dup
 		}
-		select_target = false
-		cmds = profile.collect { |cmd|
-			m = method(cmd)
-			if m.arity == 1
-				select_target = true
-			end
-			m
-		}
+		if profile != last_profile
+			select_target = false
+			cmds = profile.collect { |cmd|
+				m = method(cmd)
+				select_target = select_target || m.arity == 1
+				m
+			}
+			last_profile = profile
+		end
 		#Not poaching, valid commands
 		if !poaching && cmds
 			if select_target && (!target || target.status =~ /gone/)
