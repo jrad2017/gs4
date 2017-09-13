@@ -336,10 +336,14 @@ def execute_commands valid_targets
 			#Executes each command in order, providing target if requested
 			cmds.each{ |cmd|
 				args = Hash.new()
-				if target && cmd.parameters[0].include?(:target)
+				if cmd.parameters[0].include?(:target)
 					args[:target] = target
+					if target
+						cmd.call *args
+					end
+				else
+					cmd.call
 				end
-				cmd.call *args
 			}
 		end
 		# Always pause half a second to not spam commands too fast
