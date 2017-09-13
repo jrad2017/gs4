@@ -319,6 +319,7 @@ def execute_commands valid_targets
 	target = nil
 	last_profile = nil
 	select_target = false
+	cmds = []
 	loop {
 		#Rebuild list of commands each loop, for on-the-fly profile switches
 		profile = []
@@ -326,7 +327,6 @@ def execute_commands valid_targets
 			current = Vars[@script_name]['current']
 			profile = Vars[@script_name]['profiles'][current].dup
 		}
-		cmds = []
 		if profile != last_profile
 			select_target = false
 			cmds = profile.collect { |cmd|
