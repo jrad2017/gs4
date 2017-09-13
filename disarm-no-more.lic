@@ -142,7 +142,7 @@ loop{
 					swap_okay = true
 					wait_until {GameObj.right_hand.id == weapon}
 				elsif !swap_okay
-					fput "recite I appear to have lost my #{weapon_noun} somewhere near #{room}.\Help!"
+					fput "recite I appear to have lost my #{weapon_noun} somewhere near #{room}.;Help!"
 				end
 			end
 		end
@@ -175,7 +175,7 @@ loop{
 						swap_okay = true
 						wait_until { GameObj.left_hand.id == off_hand}
 					elsif !swap_okay
-						fput "recite I appear to have lost my #{off_hand_name} near #{room}.\Help!"
+						fput "recite I appear to have lost my #{off_hand_name} near #{room}.;Help!"
 					end
 				end
 			end
