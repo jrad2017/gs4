@@ -329,12 +329,17 @@ def execute_commands valid_targets
 			current = Vars['rkill']['current']
 			profile = Vars['rkill']['profiles'][current]
 		}
+		select_target = false
 		cmds = profile.collect { |cmd|
-			method(cmd)
+			m = method(cmd)
+			if m.arity == 1
+				select_target = true
+			end
+			m
 		}
 		#Not poaching, valid commands
 		if !poaching && cmds
-			if !target || target.status =~ /gone/
+			if select_target && (!target || target.status =~ /gone/)
 				target = cmd_target valid_targets
 			end
 
