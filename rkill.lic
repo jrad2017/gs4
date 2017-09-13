@@ -338,7 +338,7 @@ def execute_commands valid_targets
 		end
 		#Not poaching, valid commands
 		if !poaching && cmds
-			if select_target && (!target || target.status =~ /gone/)
+			if select_target && (!target || target.status =~ /dead|gone/)
 				target = cmd_target valid_targets
 			end
 
