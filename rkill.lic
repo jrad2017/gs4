@@ -366,7 +366,7 @@ Vars['rkill']['profiles'] ||= Hash.new
 Vars['rkill']['current'] ||= 'default'
 
 #This is the list of all commands which can be used in profiles. This is to ensure that incorrectly named or unexpected functions don't get injected
-@all_cmds = ['cmd_gos', 'cmd_power', 'cmd_loot', 'cmd_voln', 'cmd_vibration', 'cmd_kill', 'cmd_smastery', 'cmd_camo', 'cmd_hide', 'cmd_ambush', 'cmd_swarm', 'cmd_weed', 'cmd_col', 'stand']
+@all_cmds = ['cmd_gos', 'cmd_power', 'cmd_loot', 'cmd_voln', 'cmd_vibration', 'cmd_kill', 'cmd_smastery', 'cmd_camo', 'cmd_hide', 'cmd_ambush', 'cmd_swarm', 'cmd_weed', 'cmd_col', 'stand', 'cmd_bone', 'cmd_empathiclink', 'cmd_bind', 'cmd_sympathy', 'cmd_mstrike']
 
 #Sets up default profiles for current characters, can be deleted once configured
 if !Vars['rkill']['profiles'].include? 'default'
