@@ -44,7 +44,8 @@ have_off_hand = nil if GameObj.left_hand.id == nil
 
 swap_okay = nil
 
-Vars[script.name]['run'] ||= true
+#NOTE: The only value which disables run is 0
+Vars["#{script.name}-run"] ||= true
 
 Thread.new {
 	loop{
@@ -130,7 +131,7 @@ loop{
 			else
 				attempt_recovery weapon
 				swap_okay = GameObj.right_hand.id == weapon
-				if !swap_okay && room != nil && Vars[script.name]['run']
+				if !swap_okay && room != nil && Vars["#{script.name}-run"] != "0"
 					stop_script 'go2' if running? 'go2'
 					stop_script 'wander' if running? 'wander'
 					echo "Last time you were holding your weapon was in or around room number #{room}." if have_weapon
@@ -156,13 +157,13 @@ loop{
 		if GameObj.left_hand.id != off_hand && have_off_hand
 				if off_hand_name =~ /sonic/i
 				attempt_recovery off_hand
+				if !swap_okay && off_hand_room != nil && Vars["#{script.name}-run"] != "0"
 					waitrt?
 					waitcastrt?
 					multifput "prep 1009", "sing #{off_hand_noun}"
 					off_hand = GameObj.left_hand.id
 				else
 					swap_okay = GameObj.left_hand.id == off_hand
-					if !swap_okay && off_hand_room != nil && Vars[script.name]['run']
 						stop_script 'go2' if running? 'go2'
 						stop_script 'wander' if running? 'wander'
 						echo "Last time you were holding your weapon was in or around room number #{room}." if room != nil && have_weapon
