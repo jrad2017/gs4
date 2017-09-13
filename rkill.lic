@@ -376,6 +376,8 @@ if !Vars['rkill']['profiles'].include? 'default'
   end
 end
 
+cmd_string = "#{$lich_char}#{script.name}"
+
 def handle_profile_cmds line
 	#Processes profile commands
 	case line
@@ -421,7 +423,7 @@ def handle_profile_cmds line
 		end
 		respond "#{name} is using profile #{Vars['rkill']['current']}"
 	when /profile help/
-		respond "Usage: #{$lich_char}#{script.name} profile [options]"
+		respond "Usage: #{cmd_string} profile [options]"
 		respond ""
 		respond "Options:"
 		respond "  list: Lists all known profiles for the current character"
@@ -451,7 +453,6 @@ command_hook = proc { |line|
 	end
 }
 
-cmd_string = "#{$lich_char}#{script.name}"
 UpstreamHook.add cmd_string, command_hook
 before_dying {UpstreamHook.remove cmd_string}
 
