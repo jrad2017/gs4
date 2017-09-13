@@ -30,7 +30,7 @@ def get_current_group
 end
 
 @group_mutex = Mutex.new
-@current_mutex = Mutex.new
+@vars_mutex = Mutex.new
 
 @group_mutex.synchronize {
 	@current_group = get_current_group
@@ -318,7 +318,7 @@ def execute_commands valid_targets
 	loop {
 		#Rebuild list of commands each loop, for on-the-fly profile switches
 		profile = []
-		@current_mutex.synchronize {
+		@vars_mutex.synchronize {
 			current = Vars['rkill']['current']
 			profile = Vars['rkill']['profiles'][current]
 		}
@@ -352,14 +352,15 @@ def execute_commands valid_targets
 	}
 end
 
+#This is the list of all commands which can be used in profiles. This is to ensure that incorrectly named or unexpected functions don't get injected
+@all_cmds = ['cmd_gos', 'cmd_power', 'cmd_loot', 'cmd_voln', 'cmd_vibration', 'cmd_kill', 'cmd_smastery', 'cmd_camo', 'cmd_hide', 'cmd_ambush', 'cmd_swarm', 'cmd_weed', 'cmd_col', 'stand', 'cmd_bone', 'cmd_empathiclink', 'cmd_bind', 'cmd_sympathy', 'cmd_mstrike']
+
+#NOTE: At this point, only one thread is messing with these vars, so there's no need to mutex.
 #Sets up basic configuration structures
 Vars['rkill'] ||= Hash.new
 Vars['rkill'] ||= Hash.new
 Vars['rkill']['profiles'] ||= Hash.new
 Vars['rkill']['current'] ||= 'default'
-
-#This is the list of all commands which can be used in profiles. This is to ensure that incorrectly named or unexpected functions don't get injected
-@all_cmds = ['cmd_gos', 'cmd_power', 'cmd_loot', 'cmd_voln', 'cmd_vibration', 'cmd_kill', 'cmd_smastery', 'cmd_camo', 'cmd_hide', 'cmd_ambush', 'cmd_swarm', 'cmd_weed', 'cmd_col', 'stand', 'cmd_bone', 'cmd_empathiclink', 'cmd_bind', 'cmd_sympathy', 'cmd_mstrike']
 
 #Sets up default profiles for current characters, can be deleted once configured
 if !Vars['rkill']['profiles'].include? 'default'
@@ -377,57 +378,59 @@ end
 
 def handle_profile_cmds line
 	#Processes profile commands
-	@current_mutex.synchronize {
-		case line
-		when /profile list/
-			#List profiles for the current character
-			respond "Profiles available for #{name}:"
+	case line
+	when /profile list/
+		#List profiles for the current character
+		respond "Profiles available for #{name}:"
+		@vars_mutex.synchronize {
 			Vars['rkill']['profiles'].keys.each {|profile|
 				respond "* #{profile}"
 			}
-		when /profile set (?<pname>\w+)=(?<cmds>[\w, ]+)/
-			#Sets a profile to a string of commands
-			cmds = []
-			pname = $~[:pname]
-			$~[:cmds].split(",").each { |cmd|
-				cmd = cmd.strip
-				if !@all_cmds.include? cmd
-					respond "#{cmd} not a recognized command"
-					break
-				end
-				cmds.push(cmd)
-			}
-			Vars['rkill']['profiles'][pname] = cmds
-			respond "Added profile #{pname} for #{name}"
-		when /profile rm (?<pname>\w+)/
-			#Removes a profile
-			pname = $~[:pname]
-			Vars['rkill']['profiles'].delete pname
-			respond "Removed profile #{pname} for #{name}"
-		when /profile info (?<pname>\w+)/
-			pname = $~[:pname]
+		}
+	when /profile set (?<pname>\w+)=(?<cmds>[\w, ]+)/
+		#Sets a profile to a string of commands
+		cmds = []
+		pname = $~[:pname]
+		$~[:cmds].split(",").each { |cmd|
+			cmd = cmd.strip
+			if !@all_cmds.include? cmd
+				respond "#{cmd} not a recognized command"
+				break
+			end
+			cmds.push(cmd)
+		}
+		@vars_mutex.synchronize { Vars['rkill']['profiles'][pname] = cmds }
+		respond "Added profile #{pname} for #{name}"
+	when /profile rm (?<pname>\w+)/
+		#Removes a profile
+		pname = $~[:pname]
+		@vars_mutex.synchronize { Vars['rkill']['profiles'].delete pname }
+		respond "Removed profile #{pname} for #{name}"
+	when /profile info (?<pname>\w+)/
+		pname = $~[:pname]
+		@vars_mutex.synchronize {
 			if Vars['rkill']['profiles'].include? pname
 				print_profile_info pname, Vars['rkill']['profiles'][pname]
 			else
 				respond "#{pname} not a profile for #{name}"
 			end
-		when /profile current/
-			if line =~ /current (?<set>\w+)/ && $~[:set]
-				Vars['rkill']['current'] = $~[:set]
-			end
-			respond "#{name} is using profile #{Vars['rkill']['current']}"
-		when /profile help/
-			respond "Usage: #{$lich_char}#{script.name} profile [options]"
-			respond ""
-			respond "Options:"
-			respond "  list: Lists all known profiles for the current character"
-			respond "  set [profile=cmds]: Sets the named profile to the comma separated list of commands given"
-			respond "  rm profile_name: Deletes named profile"
-			respond "  info profile_name: Lists the command sequence of a given profile"
-			respond "  current [profile_name]: Lists the current profile, or sets it to the given name if specified"
-			respond "  help: Prints this help message"
+		}
+	when /profile current/
+		if line =~ /current (?<set>\w+)/ && $~[:set]
+			@vars_mutex.synchronize { Vars['rkill']['current'] = $~[:set] }
 		end
-	}
+		respond "#{name} is using profile #{Vars['rkill']['current']}"
+	when /profile help/
+		respond "Usage: #{$lich_char}#{script.name} profile [options]"
+		respond ""
+		respond "Options:"
+		respond "  list: Lists all known profiles for the current character"
+		respond "  set [profile=cmds]: Sets the named profile to the comma separated list of commands given"
+		respond "  rm profile_name: Deletes named profile"
+		respond "  info profile_name: Lists the command sequence of a given profile"
+		respond "  current [profile_name]: Lists the current profile, or sets it to the given name if specified"
+		respond "  help: Prints this help message"
+	end
 end
 
 #Thread for accepting commands during operation
@@ -435,9 +438,7 @@ command_hook = proc { |line|
 	case line
 	when /update_group/
 		#Updates group for poaching tests
-		@group_mutex.synchronize {
-			@current_group = get_current_group
-		}
+		@group_mutex.synchronize { @current_group = get_current_group }
 		nil
 	when /commands/
 		respond "Available commands: #{@all_cmds}"
