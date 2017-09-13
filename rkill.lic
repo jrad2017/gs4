@@ -320,7 +320,7 @@ def execute_commands valid_targets
 		profile = []
 		@vars_mutex.synchronize {
 			current = Vars['rkill']['current']
-			profile = Vars['rkill']['profiles'][current]
+			profile = Vars['rkill']['profiles'][current].dup
 		}
 		select_target = false
 		cmds = profile.collect { |cmd|
