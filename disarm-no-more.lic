@@ -133,7 +133,7 @@ loop{
 				if !swap_okay && room != nil && Vars[script.name]['run']
 					stop_script 'go2' if running? 'go2'
 					stop_script 'wander' if running? 'wander'
-					echo "Last time you were holding your weapon was in or around room number #{room}." have_weapon
+					echo "Last time you were holding your weapon was in or around room number #{room}." if have_weapon
 					echo "Last time you were holding your shield/off hand was in or around room number #{off_hand_room}." if off_hand_room != nil && have_off_hand
 					start_script "go2", [room] if Room.current.id != room && room != nil
 					wait_while{ running?('go2') }
