@@ -307,6 +307,14 @@ def find_priority_target valid_targets
   [target, pri]
 end
 
+def find_any_target
+	target = GameObj.npcs.find { |npc|
+		fput "target ##{npc.id}"
+		line = get until line =~ /^Usage|^You are now (?<success>targeting)|^You do not have a target\.|You can only target creatures and players\.|You can't target|^Could not find a valid target\./
+		$~[:success]
+	}
+end
+
 def cmd_sympathy
   #Cast sympathy if enough creatures are present
   sympathy = Spell[1120]
@@ -394,10 +402,12 @@ def execute_commands
 		#Rebuild list of commands each loop, for on-the-fly profile switches
 		profile = []
 		valid_targets = nil
+		use_target_list = true
 		@vars_mutex.synchronize {
 			current = Vars[@script_name]['current']
 			profile = Vars[@script_name]['profiles'][current].dup
 			valid_targets = Vars[@script_name]['targets'].dup
+			use_target_list = !Vars[@script_name]['use_target_lists']
 		}
 
 		if profile != last_profile
@@ -419,6 +429,10 @@ def execute_commands
 					target = new_target
 					target_pri = new_pri
 					fput "target ##{target.id}"
+				end
+			elsif select_target
+				if target && target !~ /gone/
+					target = find_any_target
 				end
 			end
 
@@ -447,6 +461,7 @@ Vars[@script_name] ||= Hash.new
 Vars[@script_name]['profiles'] ||= Hash.new
 Vars[@script_name]['current'] ||= 'default'
 Vars[@script_name]['targets'] ||= []
+Vars[@script_name]['use_target_lists'] = true
 
 #Sets up default profiles for current characters, can be deleted once configured
 if !Vars[@script_name]['profiles'].include? 'default'
@@ -547,6 +562,20 @@ def handle_target_cmds line
 			Vars[@script_name]['targets'][$~[:pri]].push $~[:name]
 		}
 		respond "Added #{$~[:name]} to priority #{$~[:pri]}"
+  when /targets all=?(?<flag>on|off)?/
+    if $~[:flag]
+      flag = true
+      if $~[:flag] == "off"
+        flag = false
+      end
+      @vars_mutex.synchronize { Vars[@script_name]['use_target_lists'] = flag }
+    end
+
+    if Vars[@script_name]['use_target_lists']
+      respond "Using targetting lists"
+    else
+      respond "Targetting any enemy in sight"
+    end
 	when /targets help/
 		respond "Usage: #{cmd_string} targets [options]"
 		respond "  Handles the list of valid targets and priorities for hunting"
