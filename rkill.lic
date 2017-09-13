@@ -295,12 +295,16 @@ def cmd_bind target
 	}
 end
 
-def cmd_target valid_targets
-	target = GameObj.npcs.find { |npc| is_valid_target npc, valid_targets: valid_targets }
-	if target
-		fput "target ##{target.id}"
-	end
-  target
+def find_priority_target valid_targets
+	target = nil
+	pri = nil
+	valid.targets.each_with_index {|list, ii|
+		target_regex = Regexp.new list.join("|")
+		target = GameObj.npcs.find { |npc| is_valid_target npc, valid_targets: target_regex }
+		pri = ii
+		break if target
+	}
+  [target, pri]
 end
 
 def cmd_sympathy
@@ -353,19 +357,49 @@ def print_profile_info pname, profile
   }
 end
 
-def execute_commands valid_targets
+def print_target_priority priority
+	#Prints out a single priority level
+	targets = nil
+	@vars_mutex.synchronize {
+		targets = Vars[@script_name]['targets'].fetch(priority, nil).dup
+	}
+	if !targets
+		respond "Priority #{priority} not found!"
+		return
+	end
+
+	respond "Targets at priority #{priority}: #{targets}"
+end
+
+def print_all_targets
+	@vars_mutex.synchronize {
+		if Vars[@script_name]['targets'].empty?
+			respond "No targets defined!"
+		else
+			Vars[@script_name]['targets'].each_with_index { |targets, ii|
+				respond "#{ii+1}) #{targets}"
+			}
+		end
+	}
+end
+
+def execute_commands
 	#This defines the core hunting loop for all characters, executing a sequence of functions from a specified profile
 	target = nil
+	target_pri = nil
 	last_profile = nil
 	select_target = false
 	cmds = []
 	loop {
 		#Rebuild list of commands each loop, for on-the-fly profile switches
 		profile = []
+		valid_targets = nil
 		@vars_mutex.synchronize {
 			current = Vars[@script_name]['current']
 			profile = Vars[@script_name]['profiles'][current].dup
+			valid_targets = Vars[@script_name]['targets'].dup
 		}
+
 		if profile != last_profile
 			select_target = false
 			cmds = profile.collect { |cmd|
@@ -377,8 +411,15 @@ def execute_commands valid_targets
 		end
 		#Not poaching, valid commands
 		if !poaching && cmds
-			if select_target && (!target || target.status =~ /dead|gone/)
-				target = cmd_target valid_targets
+
+			#Only look for a target if we need it
+			if select_target
+				new_target, new_pri = find_priority_target valid_targets
+				if !target || target.status =~ /dead|gone/ || !target_pri || new_pri < target_pri
+					target = new_target
+					target_pri = new_pri
+					fput "target ##{target.id}"
+				end
 			end
 
 			#Executes each command in order, providing target if requested
@@ -403,9 +444,9 @@ end
 #NOTE: At this point, only one thread is messing with these vars, so there's no need to mutex.
 #Sets up basic configuration structures
 Vars[@script_name] ||= Hash.new
-Vars[@script_name] ||= Hash.new
 Vars[@script_name]['profiles'] ||= Hash.new
 Vars[@script_name]['current'] ||= 'default'
+Vars[@script_name]['targets'] ||= []
 
 #Sets up default profiles for current characters, can be deleted once configured
 if !Vars[@script_name]['profiles'].include? 'default'
@@ -480,6 +521,43 @@ def handle_profile_cmds line
 	end
 end
 
+def handle_target_cmds line
+	case line
+	when /targets list (?<pri>\d+)?/
+		if $~[:pri]
+			print_target_priority $~[:pri]
+		else
+			print_all_targets
+		end
+	when /targets rm (?<pri>\d+) (?<name>\w+)/
+		@vars_mutex.synchronize {
+			if Vars[@script_name]['targets'].length <= $~[:pri]
+				respond "No targets at priority #{$~[:pri]}"
+			else
+				Vars[@script_name]['targets'].delete_if {|tgt| tgt == $~[:name] }
+			end
+		}
+		respond "Removed #{$~[:name]} from priority #{$~[:pri]}"
+	when /targets add (?<pri>\d+) (?<name>\w+)/
+		@vars_mutex.synchronize {
+			while Vars[@script_name]['targets'].length <= $~[:pri]
+				Vars[@script_name]['length'].push Array.new()
+			end
+
+			Vars[@script_name]['targets'][$~[:pri]].push $~[:name]
+		}
+		respond "Added #{$~[:name]} to priority #{$~[:pri]}"
+	when /targets help/
+		respond "Usage: #{cmd_string} targets [options]"
+		respond "  Handles the list of valid targets and priorities for hunting"
+		respond ""
+		respond "Options: "
+		respond "  list [$priority]: Prints all creatures, or all creatures of a specified priority level"
+		respond "  add $priority $name: Adds $name to $priority level"
+		respond "  rm $priority $name: Removes $name from $priority level"
+	end
+end
+
 #Thread for accepting commands during operation
 command_hook = proc { |line|
 	case line
@@ -493,6 +571,9 @@ command_hook = proc { |line|
 	when /profile/
 		handle_profile_cmds line
 		nil
+	when /targets/
+		handle_target_cmds line
+		nil
 	else
 		line
 	end
@@ -502,6 +583,7 @@ UpstreamHook.add @cmd_string, command_hook
 before_dying {UpstreamHook.remove @cmd_string}
 
 #Valid targets are listed here on a per-character basis
+#FIXME: These valid_target lists no longer do anything
 valid_targets = //
 case name
 when 'Alyssea'
@@ -513,4 +595,4 @@ when 'Predest'
 #when 'Ericos' #This isn't here, since Ericos never targets via this script
 end
 
-execute_commands valid_targets
+execute_commands
