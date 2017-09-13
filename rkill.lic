@@ -145,7 +145,8 @@ end
 
 def cmd_weed target
 	return if target.status =~ /dead|gone/
-	return if GameObj.loot.find { |loot| loot.name =~ /vine/ }
+	#TODO: Make this more intelligent about detecting enemy vines
+	return if GameObj.loot.find { |loot| loot.name =~ /vine$/ }
 	return unless Spell[610].known? and Spell[610].affordable?
 	return if target.name =~ /lava golem|skayl|banshee/i
 	return if checkmana <= 140
