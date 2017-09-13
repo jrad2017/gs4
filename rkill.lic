@@ -39,10 +39,10 @@ end
 def poaching
 	#Test if someone in the room is unexpected, to avoid poaching
 	#Get minimal list of names to care about
-		pcs = Set.new @core_group
-		@group_mutex.synchronize {
-			pcs.merge @current_group
-		}
+	pcs = Set.new @core_group
+	@group_mutex.synchronize {
+		pcs.merge @current_group
+	}
 	party_members = Regexp.new pcs.to_a.join("|")
 	GameObj.pcs.any? {|pc| pc.name !~ party_members}
 end
@@ -170,7 +170,6 @@ def cmd_sounds target
 	waitcastrt?
 	Spell[607].cast("#{target}")
 	waitcastrt?
-
 end
 
 def cmd_camo target
@@ -178,7 +177,6 @@ def cmd_camo target
 	return if target.status =~ /dead|gone/
   maintain_spells [Spell[608]], min_mana: 15
 end
-
 
 def cmd_hide target
 	return if(hiding?)
@@ -223,7 +221,7 @@ def cmd_kill target
 	change_stance('offensive')
 	fput "kill ##{target.id}"
 	change_stance('defensive')
-	end
+end
 
 def cmd_mstrike
 	if( !Spell[9005].active? && Skills.multiopponentcombat >= 15 && GameObj.npcs.all? { |i| i.noun !~ /nest/i } )
@@ -249,7 +247,6 @@ def cmd_vibration target
 	waitcastrt?
 	Spell[1002].cast("#{target}")
 	waitcastrt?
-
 end
 
 def cmd_bone target
@@ -278,7 +275,6 @@ def cmd_bind target
 	return unless Spell[214].known?
 
 	GameObj.npcs.each { |npc|
-#		 echo "##{npc.id} #{npc.status !~ /immobilized|dead|gone/i}"
 		if npc.type =~ @target_types and npc.status !~ /frozen|dead|gone/i and checkmana > 50
 			Spell[214].cast "##{npc.id}"
 		end
