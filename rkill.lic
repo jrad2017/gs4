@@ -321,6 +321,7 @@ end
 
 def execute_commands valid_targets
 	#This defines the core hunting loop for all characters, executing a sequence of functions from a specified profile
+	target = nil
 	loop {
 		#Rebuild list of commands each loop, for on-the-fly profile switches
 		profile = []
@@ -333,7 +334,9 @@ def execute_commands valid_targets
 		}
 		#Not poaching, valid commands
 		if !poaching && cmds
-			target = cmd_target valid_targets
+			if !target || target.status =~ /gone/
+				target = cmd_target valid_targets
+			end
 
 			#Executes each command in order, providing target if requested
 			cmds.each{ |cmd|
