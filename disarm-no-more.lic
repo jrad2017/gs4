@@ -155,12 +155,12 @@ loop{
 		end
 		if GameObj.left_hand.id != off_hand && have_off_hand
 				if off_hand_name =~ /sonic/i
+				attempt_recovery off_hand
 					waitrt?
 					waitcastrt?
 					multifput "prep 1009", "sing #{off_hand_noun}"
 					off_hand = GameObj.left_hand.id
 				else
-					attempt_recover off_hand
 					swap_okay = GameObj.left_hand.id == off_hand
 					if !swap_okay && off_hand_room != nil && Vars[script.name]['run']
 						stop_script 'go2' if running? 'go2'
@@ -170,11 +170,11 @@ loop{
 						start_script "go2", [off_hand_room] if Room.current.id != off_hand_room && off_hand_room != nil
 						wait_while{ running?('go2') }
 						waitrt?
-						attempt_recover off_hand
 						swap_okay = true
 						wait_until { GameObj.left_hand.id == off_hand}
 					elsif !swap_okay
 						fput "recite I appear to have lost my #{off_hand_name} near #{room}.;Help!"
+					attempt_recovery off_hand
 				end
 			end
 		end
