@@ -382,6 +382,8 @@ command_thread = Thread.new {
 			@group_mutex.synchronize {
 				@current_group = get_current_group
 			}
+		when /#{$lich_char}#{script.name} commands/
+			respond "Available commands: #{@all_cmds}"
 		when /#{$lich_char}#{script.name} profile/
 			#Processes profile commands
 			@current_mutex.synchronize {
