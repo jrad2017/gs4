@@ -293,13 +293,13 @@ def cmd_sympathy
 end
 
 def cmd_loot
-	target = GameObj.npcs.find { |npc| npc.status == 'dead' }
-	if target
-		start_script "sloot"
-		wait_while{running?('sloot')}
-	else
-		sleep 0.1
-	end
+	#Loot dead bodies
+	#Must have at least one creature present
+	return if GameObj.npcs.count { |npc| npc.type =~ @target_types } == 0
+	#All NPCs must be non-aggressive, or dead
+	return unless GameObj.npcs.all { |npc| npc.type !~ @target_types || npc.status =~ /dead|gone/ }
+	start_script "sloot"
+	wait_while{running?('sloot')}
 end
 
 def print_profile_info pname, profile
