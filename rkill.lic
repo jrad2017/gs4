@@ -53,8 +53,8 @@ def change_stance new_stance, force: true
 	return if checkstance new_stance
 	return if checkcastrt > 0 && new_stance =~ /def/ && checkstance "guarded"
 
-	if(force)
-		result = dothistimeout( "stance #{new_stance}", 3, /You are now in an?|Cast Round Time in effect|You are unable to change/ )
+	if force
+		result = dothistimeout "stance #{new_stance}", 3, /You are now in an?|Cast Round Time in effect|You are unable to change/
 	else
 		put "stance #{new_stance}"
 	end
