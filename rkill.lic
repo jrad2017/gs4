@@ -2,8 +2,14 @@
 Script for hunting with Ericos et al.
 =end
 
+#These people are always considered part of the group, regardless of membership
 @core_group = ["Ericos", "Predest", "Alyssea", "Archaeron", "Draccor", "Naina", "Szyxt"]
+#Default set of NPC types to consider attack
 @target_types = /aggressive npc|undead|bandit|grimswarm/
+#Default set of NPCs to target
+@valid_targets = //
+
+@script_name = script.name
 
 def name
 	#Function to get active character name
@@ -25,45 +31,46 @@ def get_current_group
 	group
 end
 
-@current_group = get_current_group
 @group_mutex = Mutex.new
+@vars_mutex = Mutex.new
+
+@group_mutex.synchronize {
+	@current_group = get_current_group
+}
 
 def poaching
 	#Test if someone in the room is unexpected, to avoid poaching
 	#Get minimal list of names to care about
-		pcs = Set.new @core_group
-		@group_mutex.synchronize {
-			pcs.merge @current_group
-		}
+	pcs = Set.new @core_group
+	@group_mutex.synchronize {
+		pcs.merge @current_group
+	}
 	party_members = Regexp.new pcs.to_a.join("|")
 	GameObj.pcs.any? {|pc| pc.name !~ party_members}
 end
 
-def change_stance new_stance, force = true
+def change_stance new_stance, force: true
 	#return unless new_stance =~ /off/ # pookahs/bog
 	return if Spell[1617].active? || Spell[216].active? || dead?
+	return if checkstance(new_stance)
+	return if checkcastrt > 0 && new_stance =~ /def/ && checkstance("guarded")
 
-	if stance() =~ /#{new_stance}/
-		return
-	elsif checkcastrt() > 0 && new_stance =~ /def/
-		return if stance() == 'guarded'
-	end
-
-	if(force)
-		result = dothistimeout( "stance #{new_stance}", 3, /You are now in an?|Cast Round Time in effect|You are unable to change/ )
+	if force
+		result = dothistimeout "stance #{new_stance}", 3, /You are now in an?|Cast Round Time in effect|You are unable to change/
 	else
 		put "stance #{new_stance}"
 	end
 end
 
 def stand
+	#Goes defensive, then stands
 	until(standing?)
 		change_stance('defensive')
 		fput 'stand'
 	end
 end
 
-def is_valid_target npc, valid_targets=@valid_targets, target_types=@target_types
+def is_valid_target npc, valid_targets:@valid_targets, target_types:@target_types
   #Function which determines if an NPC is a valid target for combat
   npc.name =~ valid_targets and npc.status !~ /dead|gone/i and npc.type =~ target_types
 end
@@ -118,15 +125,14 @@ def cmd_fury target
 	return if GameObj.npcs.count { |npc| is_valid_target npc } < 5
 
 	waitcastrt?
-	Spell[635].cast("#{target}")
+	Spell[635].cast "##{target.id}"
 	change_stance('guarded')
 	waitcastrt?
 end
 
 def cmd_swarm target
 	return if target.status =~ /dead|gone/
-	return if GameObj.loot.find { |loot| loot.name =~ /swarm/ }
-	return if GameObj.loot.find { |loot| loot.name =~ /vine/ }
+	return if GameObj.loot.find { |loot| loot.name =~ /swarm$|vine$/ }
 	return unless Spell[615].known? and Spell[615].affordable?
 	return if target.name =~ /lava golem|skayl|banshee|stone troll|stone giant/i
 	return if checkmana <= 140
@@ -134,14 +140,15 @@ def cmd_swarm target
 
 	waitcastrt?
 	change_stance('offensive')
-	Spell[615].cast("#{target}")
+	Spell[615].cast "##{target.id}"
 	change_stance('guarded')
 	waitcastrt?
 end
 
 def cmd_weed target
 	return if target.status =~ /dead|gone/
-	return if GameObj.loot.find { |loot| loot.name =~ /vine/ }
+	#TODO: Make this more intelligent about detecting enemy vines
+	return if GameObj.loot.find { |loot| loot.name =~ /swarm$|vine$/ }
 	return unless Spell[610].known? and Spell[610].affordable?
 	return if target.name =~ /lava golem|skayl|banshee/i
 	return if checkmana <= 140
@@ -149,7 +156,7 @@ def cmd_weed target
 
 	waitcastrt?
 	change_stance('offensive')
-	Spell[610].cast("#{target}")
+	Spell[610].cast "##{target.id}"
 	change_stance('guarded')
 	waitcastrt?
 end
@@ -159,22 +166,22 @@ def cmd_sounds target
 	return unless Spell[607].known? and Spell[607].affordable?
 
 	waitcastrt?
-	Spell[607].cast("#{target}")
+	Spell[607].cast "##{target.id}"
 	waitcastrt?
-
 end
 
-def cmd_camo
+def cmd_camo target
 	return if(hiding?)
+	return if target.status =~ /dead|gone/
   maintain_spells [Spell[608]], min_mana: 15
 end
 
-
-def cmd_hide
+def cmd_hide target
 	return if(hiding?)
+	return if target.status =~ /dead|gone/
 	fput "hide"
-		waitrt?
-		if matchtimeout 1, "You attempt to blend with the surroundings"
+	waitrt?
+	if matchtimeout 1, "You attempt to blend with the surroundings"
 		sleep 0.1
 	end
 end
@@ -212,7 +219,7 @@ def cmd_kill target
 	change_stance('offensive')
 	fput "kill ##{target.id}"
 	change_stance('defensive')
-	end
+end
 
 def cmd_mstrike
 	if( !Spell[9005].active? && Skills.multiopponentcombat >= 15 && GameObj.npcs.all? { |i| i.noun !~ /nest/i } )
@@ -236,9 +243,8 @@ def cmd_vibration target
 	return if checkmana <= 45
 
 	waitcastrt?
-	Spell[1002].cast("#{target}")
+	Spell[1002].cast "##{target.id}"
 	waitcastrt?
-
 end
 
 def cmd_bone target
@@ -246,7 +252,8 @@ def cmd_bone target
 	return unless Spell[1106].known? and Spell[1106].affordable?
 
 		waitcastrt?
-		multifput "incant 1106", "stance defensive"
+		Spell[1106].cast "##{target.id}"
+		change_stance "defensive"
 		waitcastrt?
 end
 
@@ -257,7 +264,7 @@ def cmd_empathiclink target
 	return if GameObj.npcs.count { |npc| is_valid_target npc } < 4
 
 	waitcastrt?
-	Spell[1117].cast("#{target}")
+	Spell[1117].cast "##{target.id}"
 	change_stance('guarded')
 	waitcastrt?
 end
@@ -267,15 +274,14 @@ def cmd_bind target
 	return unless Spell[214].known?
 
 	GameObj.npcs.each { |npc|
-#		 echo "##{npc.id} #{npc.status !~ /immobilized|dead|gone/i}"
 		if npc.type =~ @target_types and npc.status !~ /frozen|dead|gone/i and checkmana > 50
 			Spell[214].cast "##{npc.id}"
 		end
 	}
 end
 
-def cmd_target
-	target = GameObj.npcs.find { |npc| is_valid_target npc }
+def cmd_target valid_targets
+	target = GameObj.npcs.find { |npc| is_valid_target npc, valid_targets: valid_targets }
 	if target
 		fput "target ##{target.id}"
 	end
@@ -286,115 +292,186 @@ def cmd_sympathy
   #Cast sympathy if enough creatures are present
   sympathy = Spell[1120]
   return unless sympathy.known? and sympathy.affordable?
-  return if GameObj.npcs.count { |npc| is_valid_target npc, target_types=/bandit/ } < 6
+  return if GameObj.npcs.count { |npc| is_valid_target npc, target_types:/bandit/ } < 6
   sympathy.cast
 end
 
 def cmd_loot
-	target = GameObj.npcs.find { |npc| npc.status == 'dead' }
-	if target
-		start_script "sloot"
-		wait_while{running?('sloot')}
-	else
-		sleep 0.1
-	end
+	#Loot dead bodies
+	#Must have at least one creature present
+	return if GameObj.npcs.count { |npc| npc.type =~ @target_types } == 0
+	#All NPCs must be non-aggressive, or dead
+	return unless GameObj.npcs.all? { |npc| npc.type !~ @target_types || npc.status =~ /dead|gone/ }
+	start_script "sloot"
+	wait_while{running?('sloot')}
 end
 
-def ekill
-	cmd_col
+def print_profile_info pname, profile
+	#Pretty printer for profile commands
+  respond "#{pname} is set to: "
+  profile.each_with_index { |cmd, ii|
+    respond "  #{ii + 1}) #{cmd}"
+  }
 end
 
-def pkill
+def execute_commands valid_targets
+	#This defines the core hunting loop for all characters, executing a sequence of functions from a specified profile
+	target = nil
+	last_profile = nil
+	select_target = false
+	cmds = []
 	loop {
-    cmd_gos
-
-		if !poaching
-
-			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
-			target = cmd_target
-			if target
-				cmd_gos
-				cmd_smastery
-		#		cmd_sounds target
-				cmd_weed target
-				cmd_swarm target
-		#		cmd_fury target
-				stand
-				cmd_camo
-				cmd_hide
-				cmd_ambush target
-			else
-#			cmd_loot
-			end
+		#Rebuild list of commands each loop, for on-the-fly profile switches
+		profile = []
+		@vars_mutex.synchronize {
+			current = Vars[@script_name]['current']
+			profile = Vars[@script_name]['profiles'][current].dup
+		}
+		if profile != last_profile
+			select_target = false
+			cmds = profile.collect { |cmd|
+				m = method(cmd)
+				select_target = select_target || m.arity == 1
+				m
+			}
+			last_profile = profile
 		end
-		sleep 0.5
-	}
-end
-
-def alyskill
-	loop {
-		cmd_gos
-
-		if !poaching
-
-			@valid_targets = /(warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|janissary|herald|griffin|scout|adept|lurk|fanatic|monstrosity|shaper|sentinel|lesser minotaur|krag yeti|minotaur warrior|minotaur magus|jarl|krynch|elder|being|goleras|moulis|shrickhen|champion|seer|initiate|dogmatist|hierophant|supplicant)/i
-			target = cmd_target
-			if target
-				cmd_gos
-			#	cmd_bind target
-			#	cmd_bone target
-			#	cmd_empathiclink target
-				cmd_power
-			else
-				cmd_loot
+		#Not poaching, valid commands
+		if !poaching && cmds
+			if select_target && (!target || target.status =~ /dead|gone/)
+				target = cmd_target valid_targets
 			end
-		end
-		sleep 0.5
-	}
-end
 
-def archkill
-	loop {
-    cmd_voln
-		if !poaching
-
-			@valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
-			target = cmd_target
-			if target
-				cmd_vibration target
-				cmd_kill target
-			else
-			#	cmd_loot
-			end
-		end
-		sleep 0.5
-	}
-end
-
-toggle_upstream
-
-command_thread = Thread.new {
-	loop {
-		line = upstream_get
-		if line =~ /#{$lich_char}#{script.name} update_group/
-			@group_mutex.synchronize {
-				@current_group = get_current_group
+			#Executes each command in order, providing target if requested
+			cmds.each{ |cmd|
+				if cmd.parameters[0].include?(:target)
+					if target
+						cmd.call target
+					end
+				else
+					cmd.call
+				end
 			}
 		end
+		# Always pause half a second to not spam commands too fast
+		sleep 0.5
 	}
+end
+
+#This is the list of all commands which can be used in profiles. This is to ensure that incorrectly named or unexpected functions don't get injected
+@all_cmds = ['cmd_gos', 'cmd_power', 'cmd_loot', 'cmd_voln', 'cmd_vibration', 'cmd_kill', 'cmd_smastery', 'cmd_camo', 'cmd_hide', 'cmd_ambush', 'cmd_swarm', 'cmd_weed', 'cmd_col', 'stand', 'cmd_bone', 'cmd_empathiclink', 'cmd_bind', 'cmd_sympathy', 'cmd_mstrike']
+
+#NOTE: At this point, only one thread is messing with these vars, so there's no need to mutex.
+#Sets up basic configuration structures
+Vars[@script_name] ||= Hash.new
+Vars[@script_name] ||= Hash.new
+Vars[@script_name]['profiles'] ||= Hash.new
+Vars[@script_name]['current'] ||= 'default'
+
+#Sets up default profiles for current characters, can be deleted once configured
+if !Vars[@script_name]['profiles'].include? 'default'
+  case name
+  when "Alyssea"
+    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'cmd_power', 'cmd_loot']
+  when "Archaeron"
+    Vars[@script_name]['profiles']['default'] = ['cmd_voln', 'cmd_vibration', 'cmd_kill']
+  when "Predest"
+    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'cmd_smastery', 'cmd_weed', 'cmd_swarm', 'stand', 'cmd_camo', 'cmd_hide', 'cmd_ambush']
+  when "Ericos"
+    Vars[@script_name]['profiles']['default'] = ['cmd_col']
+  end
+end
+
+cmd_string = "#{$lich_char}#{@script_name}"
+
+def handle_profile_cmds line
+	#Processes profile commands
+	case line
+	when /profile list/
+		#List profiles for the current character
+		respond "Profiles available for #{name}:"
+		@vars_mutex.synchronize {
+			Vars[@script_name]['profiles'].keys.each {|profile|
+				respond "* #{profile}"
+			}
+		}
+	when /profile set (?<pname>\w+)=(?<cmds>[\w, ]+)/
+		#Sets a profile to a string of commands
+		cmds = []
+		pname = $~[:pname]
+		$~[:cmds].split(",").each { |cmd|
+			cmd = cmd.strip
+			if !@all_cmds.include? cmd
+				respond "#{cmd} not a recognized command"
+				break
+			end
+			cmds.push(cmd)
+		}
+		@vars_mutex.synchronize { Vars[@script_name]['profiles'][pname] = cmds }
+		respond "Added profile #{pname} for #{name}"
+	when /profile rm (?<pname>\w+)/
+		#Removes a profile
+		pname = $~[:pname]
+		@vars_mutex.synchronize { Vars[@script_name]['profiles'].delete pname }
+		respond "Removed profile #{pname} for #{name}"
+	when /profile info (?<pname>\w+)/
+		pname = $~[:pname]
+		@vars_mutex.synchronize {
+			if Vars[@script_name]['profiles'].include? pname
+				print_profile_info pname, Vars[@script_name]['profiles'][pname]
+			else
+				respond "#{pname} not a profile for #{name}"
+			end
+		}
+	when /profile current/
+		if line =~ /current (?<set>\w+)/ && $~[:set]
+			@vars_mutex.synchronize { Vars[@script_name]['current'] = $~[:set] }
+		end
+		respond "#{name} is using profile #{Vars[@script_name]['current']}"
+	when /profile help/
+		respond "Usage: #{cmd_string} profile [options]"
+		respond ""
+		respond "Options:"
+		respond "  list: Lists all known profiles for the current character"
+		respond "  set [profile=cmds]: Sets the named profile to the comma separated list of commands given"
+		respond "  rm profile_name: Deletes named profile"
+		respond "  info profile_name: Lists the command sequence of a given profile"
+		respond "  current [profile_name]: Lists the current profile, or sets it to the given name if specified"
+		respond "  help: Prints this help message"
+	end
+end
+
+#Thread for accepting commands during operation
+command_hook = proc { |line|
+	case line
+	when /update_group/
+		#Updates group for poaching tests
+		@group_mutex.synchronize { @current_group = get_current_group }
+		nil
+	when /commands/
+		respond "Available commands: #{@all_cmds}"
+		nil
+	when /profile/
+		handle_profile_cmds line
+		nil
+	else
+		line
+	end
 }
 
-loop {
-	stand
-  case name
-  when 'Alyssea'
-    alyskill
-	when 'Archaeron'
-		archkill
-	when 'Predest'
-		pkill
-	when 'Ericos'
-		ekill
-	end
-	sleep 1.0
-}
+UpstreamHook.add cmd_string, command_hook
+before_dying {UpstreamHook.remove cmd_string}
+
+#Valid targets are listed here on a per-character basis
+valid_targets = //
+case name
+when 'Alyssea'
+  valid_targets = /(warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|janissary|herald|griffin|scout|adept|lurk|fanatic|monstrosity|shaper|sentinel|lesser minotaur|krag yeti|minotaur warrior|minotaur magus|jarl|krynch|elder|being|goleras|moulis|shrickhen|champion|seer|initiate|dogmatist|hierophant|supplicant)/i
+when 'Archaeron'
+	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
+when 'Predest'
+	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen)/i
+#when 'Ericos' #This isn't here, since Ericos never targets via this script
+end
+
+execute_commands valid_targets
