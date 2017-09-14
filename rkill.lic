@@ -96,26 +96,26 @@ def cmd_gos
 end
 
 def cmd_power
-    power = [Spell[9718]]
-    maintain_spells power, max_mana: 100
-    # Pause to ensure lich can track stamina/mana
-    pause 0.5
+  power = [Spell[9718]]
+  maintain_spells power, max_mana: 100
+  # Pause to ensure lich can track stamina/mana
+  pause 0.5
 end
 
 def cmd_col
-    signs = [Spell[9904], Spell[9907], Spell[9908], Spell[9912], Spell[9913]]
-    maintain_spells signs, min_mana: 5
+  signs = [Spell[9904], Spell[9907], Spell[9908], Spell[9912], Spell[9913]]
+  maintain_spells signs, min_mana: 5
 end
 
 def cmd_voln
-    symbols = [Spell[9805], Spell[9806]]
-    maintain_spells symbols
+  symbols = [Spell[9805], Spell[9806]]
+  maintain_spells symbols
 end
 
 def cmd_smastery
-    #Check if cooldown is in effect
-    return if Spell[9604].active?
-    maintain_spells [Spell[9603]]
+  #Check if cooldown is in effect
+  return if Spell[9604].active?
+  maintain_spells [Spell[9603]]
 end
 
 def cmd_fury target
@@ -266,10 +266,10 @@ def cmd_bone target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1106].known? and Spell[1106].affordable?
 
-		waitcastrt?
-		Spell[1106].cast "##{target.id}"
-		change_stance "defensive"
-		waitcastrt?
+	waitcastrt?
+	Spell[1106].cast "##{target.id}"
+	change_stance "defensive"
+	waitcastrt?
 end
 
 def cmd_empathiclink target
