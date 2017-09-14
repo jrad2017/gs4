@@ -115,12 +115,12 @@ loop {
             gd_wound_transfer(healee)
         end
     elsif (Time.now - lastscantime > 15)
-  lastscantime = Time.now
-    friendlist.each { |peep|
-      if checkpcs.include?(peep)
-              pause("1s")
-            gd_wound_transfer(peep)
-      end
+  	lastscantime = Time.now
+    	friendlist.each { |peep|
+      	if checkpcs.include?(peep) and !(peep.status =~ /dead/)
+             pause("1s")
+             gd_wound_transfer(peep)
+      	end
      }
     end
     healbot_healme("Wounds", 3)
