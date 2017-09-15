@@ -23,9 +23,6 @@
 			Initial release with attack profiles
 =end
 
-#These people are always considered part of the group, regardless of membership
-@core_group = ["Ericos", "Predest", "Alyssea", "Archaeron", "Draccor", "Naina", "Szyxt"]
-
 @script_name = script.name
 
 def name
@@ -68,7 +65,8 @@ def poaching?
 	@poach_targets ||= []
 	if Room.current.id != @current_room_id
 		@poach_targets = []
-		pcs = Set.new @core_group
+		pcs = Set.new
+		@vars_mutex.synchronize { pcs.merge Vars[@script_name]['group'] }
 		@group_mutex.synchronize {
 			pcs.merge @current_group
 		}
@@ -571,6 +569,7 @@ Vars[@script_name]['current'] ||= 'default'
 Vars[@script_name]['targets'] ||= Hash.new
 Vars[@script_name]['untargettable'] ||= []
 Vars[@script_name]['use_target_lists'] = true
+Vars[@script_name]['core_group'] ||= []
 
 #Sets up default profiles for current characters, can be deleted once configured
 if !Vars[@script_name]['profiles'].include? 'default'
@@ -586,7 +585,11 @@ if !Vars[@script_name]['profiles'].include? 'default'
   end
 end
 
-@cmd_string = "#{$lich_char}#{@script_name}"
+if !Vars[@script_name].includes 'core_group' && (['Alyssea', 'Archaeron', 'Predest', 'Ericos'].includes? name)
+	Vars[@script_name]['core_group'] = ["Ericos", "Predest", "Alyssea", "Archaeron", "Draccor", "Naina", "Szyxt"]
+end
+
+cmd_string = "#{$lich_char}#{@script_name}"
 
 def handle_profile_cmds line
 	#Processes profile commands
@@ -637,6 +640,7 @@ def handle_profile_cmds line
 		}
 		respond "#{name} is using profile #{Vars[@script_name]['current']}"
 	when /profile help/
+		respond "Commands for editing attack sequence profiles"
 		respond "Usage: #{@cmd_string} profile [options]"
 		respond ""
 		respond "Options:"
@@ -701,7 +705,48 @@ def handle_target_cmds line
 	end
 end
 
-#Procedure for accepting commands during operation
+#Procedure for accepting core group commands during operation
+def handle_group_cmds line
+	case line
+	when /group list/
+		@vars_mutex.synchronize {
+			respond "Core group: #{Vars[@script_name]['group']}"
+		}
+	when /group add (?<name>\w+)/
+		@vars_mutex.synchronize {
+			pcs = Set.new Vars[@script_name]['group']
+			pcs.add $~[:name]
+			Vars[@script_name]['group'] = pcs.to_a
+		}
+		respond "Added #{$~[:name] to core group}"
+	when /group rm (?<name>\w+)/
+		pc = nil
+		@vars_mutex.synchronize {
+			pc = Vars[@script_name]['group'].delete $~[:name]
+		}
+		if pc
+			respond "Could not find #{$~[:name]} to remove from core group"
+		else
+			respond "Removed #{$~[:name]} from core group"
+	when /group set (?<names>[\w, ]+)?/
+		pcs = []
+		if $~[:name]
+			pcs = $~[:names].split(",")
+		end
+		pcs = pcs.collect { |pc| pc.strip }
+		@vars_mutex.synchronize { Vars[@script_name]['group'] = pcs }
+		respond "Core group set to #{pcs}"
+	else
+		respond "Commands for adjusting the PC's always considered part of the group for poaching"
+		respond "Usage: #{@cmd_string} group [options]"
+		respond "  list: Lists the current core group"
+		respond "  add [name]: Adds player name to core group"
+		respond "  rm [name]: Removes player name from core group"
+		respond "  set [name1,name2]: Overwrites the core group with the given list of names, with an empty list clearing the list"
+	end
+end
+
+#Thread for accepting commands during operation
 command_hook = proc { |line|
 	case line
 	when /#{@cmd_string} update_group/
@@ -710,6 +755,9 @@ command_hook = proc { |line|
 		nil
 	when /#{@cmd_string} commands/
 		respond "Available commands: #{@all_cmds}"
+		nil
+	when /#{@cmd_string} group/
+		handle_group_cmds line
 		nil
 	when /#{@cmd_string} profile/
 		handle_profile_cmds line
