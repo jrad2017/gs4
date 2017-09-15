@@ -382,7 +382,7 @@ if !Vars[@script_name]['profiles'].include? 'default'
   end
 end
 
-cmd_string = "#{$lich_char}#{@script_name}"
+@cmd_string = "#{$lich_char}#{@script_name}"
 
 def handle_profile_cmds line
 	#Processes profile commands
@@ -429,7 +429,7 @@ def handle_profile_cmds line
 		end
 		respond "#{name} is using profile #{Vars[@script_name]['current']}"
 	when /profile help/
-		respond "Usage: #{cmd_string} profile [options]"
+		respond "Usage: #{@cmd_string} profile [options]"
 		respond ""
 		respond "Options:"
 		respond "  list: Lists all known profiles for the current character"
@@ -459,8 +459,8 @@ command_hook = proc { |line|
 	end
 }
 
-UpstreamHook.add cmd_string, command_hook
-before_dying {UpstreamHook.remove cmd_string}
+UpstreamHook.add @cmd_string, command_hook
+before_dying {UpstreamHook.remove @cmd_string}
 
 #Valid targets are listed here on a per-character basis
 valid_targets = //
