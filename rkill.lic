@@ -710,28 +710,28 @@ def handle_group_cmds line
 	case line
 	when /group list/
 		@vars_mutex.synchronize {
-			respond "Core group: #{Vars[@script_name]['group']}"
+			respond "Core group: #{Vars[@script_name]['group'].map(&:capitalize)}"
 		}
 	when /group add (?<name>\w+)/
 		@vars_mutex.synchronize {
 			pcs = Set.new Vars[@script_name]['group']
-			pcs.add $~[:name]
+			pcs.add $~[:name].downcase
 			Vars[@script_name]['group'] = pcs.to_a
 		}
 		respond "Added #{$~[:name] to core group}"
 	when /group rm (?<name>\w+)/
 		pc = nil
 		@vars_mutex.synchronize {
-			pc = Vars[@script_name]['group'].delete $~[:name]
+			pc = Vars[@script_name]['group'].delete $~[:name].downcase
 		}
 		if pc
-			respond "Could not find #{$~[:name]} to remove from core group"
+			respond "Could not find #{$~[:name].capitalize} to remove from core group"
 		else
 			respond "Removed #{$~[:name]} from core group"
 	when /group set (?<names>[\w, ]+)?/
-		pcs = ($~[:name].split(",") || []).map {|pc| pc.strip.capitalize}
+		pcs = ($~[:name].split(",") || []).map {|pc| pc.strip.downcase}
 		@vars_mutex.synchronize { Vars[@script_name]['group'] = pcs }
-		respond "Core group set to #{pcs}"
+		respond "Core group set to #{pcs.map(&:capitalize)}"
 	else
 		respond "Commands for adjusting the PC's always considered part of the group for poaching"
 		respond "Usage: #{@cmd_string} group [options]"
