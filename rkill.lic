@@ -132,6 +132,7 @@ end
 
 def cmd_swarm target
 	return if target.status =~ /dead|gone/
+	return if target.status =~ /kneel|sit|lying|stunned/
 	return if GameObj.loot.find { |loot| loot.name =~ /swarm$|vine$/ }
 	return unless Spell[615].known? and Spell[615].affordable?
 	return if target.name =~ /lava golem|skayl|banshee|stone troll|stone giant/i
@@ -147,6 +148,7 @@ end
 
 def cmd_weed target
 	return if target.status =~ /dead|gone/
+	return if target.status =~ /kneel|sit|lying|stunned/
 	#TODO: Make this more intelligent about detecting enemy vines
 	return if GameObj.loot.find { |loot| loot.name =~ /swarm$|vine$/ }
 	return unless Spell[610].known? and Spell[610].affordable?
@@ -296,6 +298,30 @@ def cmd_sympathy
   sympathy.cast
 end
 
+def cmd_sweep target
+	return if target.status =~ /dead|gone/
+	return if target.status =~ /kneel|sit|lying|stunned/
+	return if(hiding?)
+	return if checkstamina <= 45
+	
+	change_stance('offensive')
+	fput "cman sweep ##{target.id}"
+	change_stance('defensive')
+
+end
+
+def cmd_feint target
+	return if target.status =~ /dead|gone/
+	return if target.status =~ /kneel|sit|lying|stunned/
+	return if(hiding?)
+	return if checkstamina <= 45
+	
+	change_stance('offensive')
+	fput "cman feint ##{target.id}"
+	change_stance('defensive')
+
+end
+
 def cmd_loot
 	#Loot dead bodies
 	#Must have at least one creature present
@@ -359,7 +385,7 @@ def execute_commands valid_targets
 end
 
 #This is the list of all commands which can be used in profiles. This is to ensure that incorrectly named or unexpected functions don't get injected
-@all_cmds = ['cmd_gos', 'cmd_power', 'cmd_loot', 'cmd_voln', 'cmd_vibration', 'cmd_kill', 'cmd_smastery', 'cmd_camo', 'cmd_hide', 'cmd_ambush', 'cmd_swarm', 'cmd_weed', 'cmd_col', 'stand', 'cmd_bone', 'cmd_empathiclink', 'cmd_bind', 'cmd_sympathy', 'cmd_mstrike']
+@all_cmds = ['cmd_gos', 'cmd_power', 'cmd_loot', 'cmd_voln', 'cmd_vibration', 'cmd_kill', 'cmd_smastery', 'cmd_camo', 'cmd_hide', 'cmd_ambush', 'cmd_swarm', 'cmd_weed', 'cmd_col', 'stand', 'cmd_bone', 'cmd_empathiclink', 'cmd_bind', 'cmd_sympathy', 'cmd_mstrike', 'cmd_sweep', 'cmd_feint']
 
 #NOTE: At this point, only one thread is messing with these vars, so there's no need to mutex.
 #Sets up basic configuration structures
@@ -372,13 +398,13 @@ Vars[@script_name]['current'] ||= 'default'
 if !Vars[@script_name]['profiles'].include? 'default'
   case name
   when "Alyssea"
-    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'cmd_power', 'cmd_loot']
+    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'stand', 'cmd_power', 'cmd_loot']
   when "Archaeron"
-    Vars[@script_name]['profiles']['default'] = ['cmd_voln', 'cmd_vibration', 'cmd_kill']
+    Vars[@script_name]['profiles']['default'] = ['cmd_voln', 'stand', 'cmd_feint' , 'cmd_vibration', 'cmd_kill']
   when "Predest"
-    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'cmd_smastery', 'cmd_weed', 'cmd_swarm', 'stand', 'cmd_camo', 'cmd_hide', 'cmd_ambush']
+    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'stand', 'cmd_smastery', 'cmd_sweep', 'cmd_weed', 'cmd_swarm', 'cmd_camo', 'cmd_hide', 'cmd_ambush']
   when "Ericos"
-    Vars[@script_name]['profiles']['default'] = ['cmd_col']
+    Vars[@script_name]['profiles']['default'] = ['cmd_col', 'stand']
   end
 end
 
@@ -470,7 +496,7 @@ when 'Alyssea'
 when 'Archaeron'
 	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen|raving lunatic|naisirc|seraceris|vvrael witch|caedera|csetairi|vvrael warlock)/i
 when 'Predest'
-	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen|raving lunatic|nasirc|seraceris|vvrael witch|caedera|csetairi|vvrael warlock)/i
+	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen|raving lunatic|vvrael witch|caedera|csetairi|vvrael warlock)/i
 #when 'Ericos' #This isn't here, since Ericos never targets via this script
 end
 
