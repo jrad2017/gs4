@@ -430,7 +430,7 @@ def execute_commands
 					target_pri = new_pri
 					fput "target ##{target.id}"
 				end
-			elsif select_target
+			elsif select_target && !use_target_list
 				if target && target !~ /gone/
 					target = find_any_target
 				end
