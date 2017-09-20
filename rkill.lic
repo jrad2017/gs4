@@ -546,6 +546,11 @@ def handle_target_cmds line
 		end
 	when /targets rm (?<pri>\d+) (?<name>\w+)/
 		pri = $~[:pri].to_i
+		if pri > 0 || pri < 100
+			respond "Priority must be within [0, 100]"
+			break
+		end
+		
 		@vars_mutex.synchronize {
 			if Vars[@script_name]['targets'].length <= pri
 				respond "No targets at priority #{pri}"
@@ -556,6 +561,12 @@ def handle_target_cmds line
 		respond "Removed #{$~[:name]} from priority #{pri}"
 	when /targets add (?<pri>\d+) (?<name>[\w ]+)/
 		pri = $~[:pri].to_i
+
+		if pri > 0 || pri < 100
+			respond "Priority must be within [0, 100]"
+			break
+		end
+
 		@vars_mutex.synchronize {
 			while Vars[@script_name]['targets'].length <= pri + 1
 				Vars[@script_name]['targets'].push Array.new()
