@@ -553,8 +553,8 @@ def handle_target_cmds line
 				Vars[@script_name]['targets'].delete_if {|tgt| tgt == $~[:name] }
 			end
 		}
-	when /targets add (?<pri>\d+) (?<name>\w+)/
 		respond "Removed #{$~[:name]} from priority #{pri}"
+	when /targets add (?<pri>\d+) (?<name>[\w ]+)/
 		pri = $~[:pri].to_i
 		@vars_mutex.synchronize {
 			while Vars[@script_name]['targets'].length <= pri + 1
