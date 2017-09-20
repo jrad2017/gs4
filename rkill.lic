@@ -298,7 +298,7 @@ end
 def find_priority_target valid_targets
 	target = nil
 	pri = nil
-	valid.targets.each_with_index {|list, ii|
+	valid_targets.each_with_index {|list, ii|
 		target_regex = Regexp.new list.join("|")
 		target = GameObj.npcs.find { |npc| is_valid_target npc, valid_targets: target_regex }
 		pri = ii
@@ -328,7 +328,7 @@ def cmd_sweep target
 	return if target.status =~ /kneel|sit|lying|stunned/
 	return if(hiding?)
 	return if checkstamina <= 45
-	
+
 	change_stance('offensive')
 	fput "cman sweep ##{target.id}"
 	change_stance('defensive')
@@ -340,7 +340,7 @@ def cmd_feint target
 	return if target.status =~ /kneel|sit|lying|stunned/
 	return if(hiding?)
 	return if checkstamina <= 45
-	
+
 	change_stance('offensive')
 	fput "cman feint ##{target.id}"
 	change_stance('defensive')
@@ -545,23 +545,25 @@ def handle_target_cmds line
 			print_all_targets
 		end
 	when /targets rm (?<pri>\d+) (?<name>\w+)/
+		pri = $~[:pri].to_i
 		@vars_mutex.synchronize {
-			if Vars[@script_name]['targets'].length <= $~[:pri]
-				respond "No targets at priority #{$~[:pri]}"
+			if Vars[@script_name]['targets'].length <= pri
+				respond "No targets at priority #{pri}"
 			else
 				Vars[@script_name]['targets'].delete_if {|tgt| tgt == $~[:name] }
 			end
 		}
-		respond "Removed #{$~[:name]} from priority #{$~[:pri]}"
 	when /targets add (?<pri>\d+) (?<name>\w+)/
+		respond "Removed #{$~[:name]} from priority #{pri}"
+		pri = $~[:pri].to_i
 		@vars_mutex.synchronize {
-			while Vars[@script_name]['targets'].length <= $~[:pri]
-				Vars[@script_name]['length'].push Array.new()
+			while Vars[@script_name]['targets'].length <= pri + 1
+				Vars[@script_name]['targets'].push Array.new()
 			end
 
-			Vars[@script_name]['targets'][$~[:pri]].push $~[:name]
+			Vars[@script_name]['targets'][pri].push $~[:name]
 		}
-		respond "Added #{$~[:name]} to priority #{$~[:pri]}"
+		respond "Added #{$~[:name]} to priority #{pri}"
   when /targets all=?(?<flag>on|off)?/
     if $~[:flag]
       flag = true
