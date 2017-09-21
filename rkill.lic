@@ -299,9 +299,12 @@ def find_priority_target valid_targets
 	target = nil
 	pri = nil
 	valid_targets.each_with_index {|list, ii|
+		if list.empty?
+			next
+		end
 		target_regex = Regexp.new list.join("|")
 		target = GameObj.npcs.find { |npc| is_valid_target npc, valid_targets: target_regex }
-		pri = ii
+		pri = ii if target
 		break if target
 	}
   [target, pri]
@@ -540,31 +543,31 @@ def handle_target_cmds line
 	case line
 	when /targets list (?<pri>\d+)?/
 		if $~[:pri]
-			print_target_priority $~[:pri]
+			print_target_priority $~[:pri].to_i
 		else
 			print_all_targets
 		end
-	when /targets rm (?<pri>\d+) (?<name>\w+)/
+	when /targets rm (?<pri>\d+) (?<name>[\w ]+)/
 		pri = $~[:pri].to_i
-		if pri > 0 || pri < 100
+		if pri < 0 || pri > 100
 			respond "Priority must be within [0, 100]"
-			break
+			return
 		end
 		
 		@vars_mutex.synchronize {
 			if Vars[@script_name]['targets'].length <= pri
 				respond "No targets at priority #{pri}"
 			else
-				Vars[@script_name]['targets'].delete_if {|tgt| tgt == $~[:name] }
+				Vars[@script_name]['targets'][pri].delete_if {|tgt| tgt == $~[:name] }
+				respond "Removed #{$~[:name]} from priority #{pri}"
 			end
 		}
-		respond "Removed #{$~[:name]} from priority #{pri}"
 	when /targets add (?<pri>\d+) (?<name>[\w ]+)/
 		pri = $~[:pri].to_i
 
-		if pri > 0 || pri < 100
+		if pri < 0 || pri > 100
 			respond "Priority must be within [0, 100]"
-			break
+			return
 		end
 
 		@vars_mutex.synchronize {
