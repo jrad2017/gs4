@@ -422,6 +422,7 @@ def execute_commands
 		#Not poaching, valid commands
 		if !poaching && cmds
 
+		deltaT = 0.0
 			#Only look for a target if we need it
 			if select_target
 				new_target, new_pri = find_priority_target valid_targets
@@ -436,6 +437,7 @@ def execute_commands
 				end
 			end
 
+			startTime = Time.now
 			#Executes each command in order, providing target if requested
 			cmds.each{ |cmd|
 				if cmd.parameters[0].include?(:target)
@@ -446,9 +448,12 @@ def execute_commands
 					cmd.call
 				end
 			}
+			deltaT = (Time.now - startTime)
 		end
-		# Always pause half a second to not spam commands too fast
-		sleep 0.5
+		if deltaT < 0.5
+			# Cap at 0.5s to not spam commands too fast
+			sleep 0.5 - deltaT
+		end
 	}
 end
 
