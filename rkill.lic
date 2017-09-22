@@ -130,6 +130,19 @@ def cmd_fury target
 	waitcastrt?
 end
 
+def cmd_spike target
+	return if target.status =~ /dead|gone/
+	return if checkmana <= 32
+	return if(hiding?)
+	return unless Spell[616].known? and Spell[616].affordable?
+	
+	waitcastrt?
+	Spell[616].cast "##{target.id}"
+	change_stance('guarded')
+	waitcastrt?
+	
+end
+
 def cmd_swarm target
 	return if target.status =~ /dead|gone/
 	return if target.status =~ /kneel|sit|lying|stunned/
@@ -385,7 +398,7 @@ def execute_commands valid_targets
 end
 
 #This is the list of all commands which can be used in profiles. This is to ensure that incorrectly named or unexpected functions don't get injected
-@all_cmds = ['cmd_gos', 'cmd_power', 'cmd_loot', 'cmd_voln', 'cmd_vibration', 'cmd_kill', 'cmd_smastery', 'cmd_camo', 'cmd_hide', 'cmd_ambush', 'cmd_swarm', 'cmd_weed', 'cmd_col', 'stand', 'cmd_bone', 'cmd_empathiclink', 'cmd_bind', 'cmd_sympathy', 'cmd_mstrike', 'cmd_sweep', 'cmd_feint']
+@all_cmds = ['cmd_gos', 'cmd_power', 'cmd_loot', 'cmd_voln', 'cmd_vibration', 'cmd_kill', 'cmd_smastery', 'cmd_camo', 'cmd_hide', 'cmd_ambush', 'cmd_swarm', 'cmd_weed', 'cmd_col', 'stand', 'cmd_bone', 'cmd_empathiclink', 'cmd_bind', 'cmd_sympathy', 'cmd_mstrike', 'cmd_sweep', 'cmd_feint', 'cmd_spike']
 
 #NOTE: At this point, only one thread is messing with these vars, so there's no need to mutex.
 #Sets up basic configuration structures
@@ -492,11 +505,11 @@ before_dying {UpstreamHook.remove @cmd_string}
 valid_targets = //
 case name
 when 'Alyssea'
-  valid_targets = /(warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|janissary|herald|griffin|scout|adept|lurk|fanatic|monstrosity|shaper|sentinel|lesser minotaur|krag yeti|minotaur warrior|minotaur magus|jarl|krynch|elder|being|goleras|moulis|shrickhen|champion|seer|initiate|dogmatist|hierophant|supplicant|raving lunatic|naisirc|seraceris|vvrael witch|caedera|csetairi|vvrael warlock)/i
+  valid_targets = /(warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|janissary|herald|griffin|scout|adept|lurk|fanatic|monstrosity|shaper|sentinel|lesser minotaur|krag yeti|minotaur warrior|minotaur magus|jarl|krynch|elder|being|goleras|moulis|shrickhen|champion|seer|initiate|dogmatist|hierophant|supplicant|raving lunatic|naisirc|seraceris|vvrael witch|caedera|csetairi|vvrael warlock|greater krynch|earth elemental|vaespilon|n'ecare)/i
 when 'Archaeron'
-	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen|raving lunatic|naisirc|seraceris|vvrael witch|caedera|csetairi|vvrael warlock)/i
+	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen|raving lunatic|naisirc|seraceris|vvrael witch|caedera|csetairi|vvrael warlock|greater krynch|earth elemental)/i
 when 'Predest'
-	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen|raving lunatic|vvrael witch|caedera|csetairi|vvrael warlock)/i
+	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen|raving lunatic|vvrael witch|caedera|csetairi|vvrael warlock|greater krynch|earth elemental)/i
 #when 'Ericos' #This isn't here, since Ericos never targets via this script
 end
 
