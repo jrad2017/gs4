@@ -424,15 +424,15 @@ def execute_commands
 
 		deltaT = 0.0
 			#Only look for a target if we need it
-			if select_target
+			if select_target && use_target_list
 				new_target, new_pri = find_priority_target valid_targets
 				if new_target && (!target || target.status =~ /dead|gone/ || !target_pri || new_pri < target_pri)
 					target = new_target
 					target_pri = new_pri
 					fput "target ##{target.id}"
 				end
-			elsif select_target && !use_target_list
-				if target && target !~ /gone/
+			elsif select_target
+				if !target || target.status =~ /dead|gone/
 					target = find_any_target
 				end
 			end
