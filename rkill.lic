@@ -609,17 +609,17 @@ end
 #Thread for accepting commands during operation
 command_hook = proc { |line|
 	case line
-	when /update_group/
+	when /#{@cmd_string} update_group/
 		#Updates group for poaching tests
 		@group_mutex.synchronize { @current_group = get_current_group }
 		nil
-	when /commands/
+	when /#{@cmd_string} commands/
 		respond "Available commands: #{@all_cmds}"
 		nil
-	when /profile/
+	when /#{@cmd_string} profile/
 		handle_profile_cmds line
 		nil
-	when /targets/
+	when /#{@cmd_string} targets/
 		handle_target_cmds line
 		nil
 	else
