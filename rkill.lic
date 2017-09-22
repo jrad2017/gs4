@@ -435,10 +435,8 @@ def execute_commands
 					target_pri = new_pri
 					fput "target ##{target.id}"
 				end
-			elsif select_target
-				if !target || target.status =~ /dead|gone/
-					target = find_any_target
-				end
+			elsif select_target && (!target || target.status =~ /dead|gone/)
+				target = find_any_target
 			end
 
 			startTime = Time.now
@@ -559,7 +557,7 @@ def handle_target_cmds line
 			respond "Priority must be within [0, 100]"
 			return
 		end
-		
+
 		@vars_mutex.synchronize {
 			if Vars[@script_name]['targets'].length <= pri
 				respond "No targets at priority #{pri}"
