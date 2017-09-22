@@ -18,7 +18,7 @@ end
 
 def get_current_group
 	#Get members of current group
-	group = []
+	group = [name]
 	fput "group"
 	while line = get
 		case line
