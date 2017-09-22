@@ -46,7 +46,8 @@ def poaching?
 		pcs.merge @current_group
 	}
 	party_members = Regexp.new pcs.to_a.join("|")
-	GameObj.pcs.any? {|pc| pc.name !~ party_members}
+	#Also check disk names against party members
+	GameObj.pcs.any? {|pc| pc.name !~ party_members} || GameObj.loot.any? {|obj| obj.noun == "disk" && obj.name !~ party_members}
 end
 
 def change_stance new_stance, force: true
