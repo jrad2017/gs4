@@ -364,11 +364,6 @@ def cmd_loot
 	wait_while{running?('sloot')}
 end
 
-def print_profile_info pname, profile
-	#Pretty printer for profile commands
-	respond "#{pname}=#{profile.join(",")}"
-end
-
 def print_target_priority priority
 	#Prints out a single priority level
 	targets = nil
@@ -520,7 +515,7 @@ def handle_profile_cmds line
 		pname = $~[:pname]
 		@vars_mutex.synchronize {
 			if Vars[@script_name]['profiles'].include? pname
-				print_profile_info pname, Vars[@script_name]['profiles'][pname]
+				respond "#{pname}=#{Vars[@script_name]['profiles'][pname].join(",")}"
 			else
 				respond "#{pname} not a profile for #{name}"
 			end
