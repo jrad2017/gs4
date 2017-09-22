@@ -362,10 +362,7 @@ end
 
 def print_profile_info pname, profile
 	#Pretty printer for profile commands
-  respond "#{pname} is set to: "
-  profile.each_with_index { |cmd, ii|
-    respond "  #{ii + 1}) #{cmd}"
-  }
+	respond "#{pname}=#{profile.join(",")}"
 end
 
 def print_target_priority priority
