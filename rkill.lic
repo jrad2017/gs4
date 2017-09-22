@@ -38,7 +38,7 @@ end
 	@current_group = get_current_group
 }
 
-def poaching
+def poaching?
 	#Test if someone in the room is unexpected, to avoid poaching
 	#Get minimal list of names to care about
 	pcs = Set.new @core_group
@@ -419,10 +419,10 @@ def execute_commands
 			}
 			last_profile = profile
 		end
-		#Not poaching, valid commands
-		if !poaching && cmds
 
 		deltaT = 0.0
+		#Not poaching, valid commands
+		if !poaching? && cmds
 			#Only look for a target if we need it
 			if select_target && use_target_list
 				new_target, new_pri = find_priority_target valid_targets
