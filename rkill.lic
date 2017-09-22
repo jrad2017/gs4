@@ -313,6 +313,9 @@ end
 
 def find_any_target
 	target = GameObj.npcs.find { |npc|
+		if npc.type =~ /passive npc|pet|familiar/
+			next
+		end
 		fput "target ##{npc.id}"
 		line = get until line =~ /^Usage|^You are now (?<success>targeting)|^You do not have a target\.|You can only target creatures and players\.|You can't target|^Could not find a valid target\./
 		$~[:success]
