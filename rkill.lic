@@ -580,7 +580,7 @@ def handle_target_cmds line
 		respond "Added #{$~[:name]} to priority #{pri}"
   when /targets all=?(?<flag>on|off)?/
     if $~[:flag]
-      flag = $~[:flag] !~ /off/i
+      flag = $~[:flag] =~ /off/i
       @vars_mutex.synchronize { Vars[@script_name]['use_target_lists'] = flag }
     end
 
