@@ -326,11 +326,14 @@ end
 
 def find_any_target
 	target = GameObj.npcs.find { |npc|
-		if npc.type =~ /passive npc|pet|familiar/
+		if npc.type =~ /passive npc|pet|familiar/ || Vars[@script_name]['untargettable'].include? npc.name
 			next
 		end
 		fput "target ##{npc.id}"
 		line = get until line =~ /^Usage|^You are now (?<success>targeting)|^You do not have a target\.|You can only target creatures and players\.|You can't target|^Could not find a valid target\./
+		if !$~[:success]
+			Vars[@script_name]['untargettable'].push npc.name
+		end
 		$~[:success]
 	}
 end
@@ -492,6 +495,7 @@ Vars[@script_name] ||= Hash.new
 Vars[@script_name]['profiles'] ||= Hash.new
 Vars[@script_name]['current'] ||= 'default'
 Vars[@script_name]['targets'] ||= Hash.new
+Vars[@script_name]['untargettable'] ||= []
 Vars[@script_name]['use_target_lists'] = true
 
 #Sets up default profiles for current characters, can be deleted once configured
