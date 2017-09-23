@@ -631,6 +631,20 @@ command_hook = proc { |line|
 	when /#{@cmd_string} targets/
 		handle_target_cmds line
 		nil
+	when /#{@cmd_string}.*/
+		respond "Script for automating attack patterns and target selection"
+		respond "Usage: #{@cmd_string} [command] [options]"
+		respond ""
+		respond "Commands:"
+		respond "  update_group: Forces upating the group for poaching determination"
+		respond "  commands: Lists available commands for profiles"
+		respond "  profile: Commands for configuring and setting attack profiles"
+		respond "  targets: Commands for setting target priorities"
+	else
+		line
+	end
+}
+
 #Procedure for processing people joining/leaving the group organically
 group_hook = proc {|line|
 	case line
