@@ -1,5 +1,23 @@
+=begin
+	rkill.lic: Hunting with target prioritization and online adjustable attack profiles.
 
-Script for hunting with Ericos et al.
+	This script allows setting up sequences of commands known as profiles, and having characters execute those sequences during hunting. Creatures are targetted in a semi-stable fashion, which allows for multiple characters operating this script at the same time to focus-fire creatures. Includes some ideas in bigshot.lic.
+
+	Author: Ericos
+	Contributors: Ineum
+	Game: Gemstone IV
+	tags: hunting
+	Version: 2.0
+
+	changelog:
+		2.0 (2017-09-23):
+			Added target priorities for focusing on certain enemies type before others
+			Improved group join/leave detection
+			Wide ranging improvements to logic and robustness.
+		1.5:
+			Added logic for modifying attack profiles
+		1.0:
+			Initial release with attack profiles
 =end
 
 #These people are always considered part of the group, regardless of membership
