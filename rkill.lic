@@ -631,13 +631,31 @@ command_hook = proc { |line|
 	when /#{@cmd_string} targets/
 		handle_target_cmds line
 		nil
+#Procedure for processing people joining/leaving the group organically
+group_hook = proc {|line|
+	case line
+	when /$(?<name>\w+) joins (your|\w+'s) group.^/
+		#Add person to group
+		@group_mutex.synchronize {
+			@current_group.push $~[:name]
+		}
+		nil
+	when /$(?<name>\w+) leaves (your|\w+'s) group.^/
+		@group_mutex.synchronize {
+			@current_group.delete $~[:name]
+		}
+		nil
 	else
 		line
 	end
 }
 
 UpstreamHook.add @cmd_string, command_hook
-before_dying {UpstreamHook.remove @cmd_string}
+DownstreamHook.add "#{script.name} update_group", group_hook
+before_dying {
+	UpstreamHook.remove @cmd_string
+	DownstreamHook.remove "#{script.name} update_group"
+}
 
 #Valid targets are listed here on a per-character basis
 #FIXME: These valid_target lists no longer do anything
