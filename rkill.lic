@@ -326,7 +326,7 @@ end
 
 def find_any_target
 	target = GameObj.npcs.find { |npc|
-		if npc.type =~ /passive npc|pet|familiar/ || Vars[@script_name]['untargettable'].include? npc.name
+		if npc.type =~ /passive npc|pet|familiar/ || Vars[@script_name]['untargettable'].include?(npc.name)
 			next
 		end
 		fput "target ##{npc.id}"
