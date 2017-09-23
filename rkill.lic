@@ -589,11 +589,14 @@ def handle_target_cmds line
 				respond "Could not find #{$~[:name]} in target list"
 			end
 		}
-	when /targets add (?<pri>\d+) (?<name>[\w ]+)/
+	when /targets add (?<pri>\d+) (?<name>[,\w ]+)/
 		pri = $~[:pri].to_i
 
+		names = $~[:name].split(",")
 		@vars_mutex.synchronize {
-			Vars[@script_name]['targets'][$~[:name]] = pri
+			names.each{ |name|
+				Vars[@script_name]['targets'][name.strip] = pri
+			}
 		}
 		respond "Added #{$~[:name]} as target priority #{pri}"
   when /targets all=?(?<flag>on|off)?/
