@@ -4,10 +4,6 @@ Script for hunting with Ericos et al.
 
 #These people are always considered part of the group, regardless of membership
 @core_group = ["Ericos", "Predest", "Alyssea", "Archaeron", "Draccor", "Naina", "Szyxt"]
-#Default set of NPC types to consider attack
-@target_types = /aggressive npc|undead|bandit|grimswarm/
-#Default set of NPCs to target
-@valid_targets = //
 
 @script_name = script.name
 
@@ -71,9 +67,22 @@ def stand
 	end
 end
 
-def is_valid_target npc, valid_targets:@valid_targets, target_types:@target_types
-  #Function which determines if an NPC is a valid target for combat
-  npc.name =~ valid_targets and npc.status !~ /dead|gone/i and npc.type =~ target_types
+def valid_target? npc, invalid_types:nil, invalid_status: ["dead", "gone"], valid_types: nil
+  #Function which determines if an NPC is a valid target for combat, regardless of name
+	#Must not be of invalid_types or invalid_status, and must be of valid_types, if each one is set
+	valid_types_re = nil
+	invalid_types_re = nil
+	invalid_status_re = nil
+	if invalid_types && invalid_types.is_a?(Array) && !invalid_types.empty?
+		invalid_types_re = Regexp.new invalid_types.join("|")
+	end
+	if valid_types && valid_types.is_a?(Array) && !valid_types.empty?
+		valid_types_re = Regexp.new valid_types.join("|")
+	end
+	if invalid_status && invalid_status.is_a?(Array) && !invalid_status.empty?
+		invalid_status_re = Regexp.new invalid_status.join("|")
+	end
+	(valid_types_re.nil? || npc.type =~ valid_types_re) && (invalid_status_re.nil? || npc.status !~ invalid_status_re) && (invalid_types_re.nil? || npc.type !~ invalid_types_re)
 end
 
 def maintain_spells spells, min_mana: -1, max_mana: -1
@@ -123,7 +132,7 @@ def cmd_fury target
 	return unless Spell[635].known? and Spell[635].affordable?
 	return if checkmana <= 45
 	return if(hiding?)
-	return if GameObj.npcs.count { |npc| is_valid_target npc } < 5
+	return if GameObj.npcs.count { |npc| valid_target? npc, target_types: ["aggressive npc"]} < 5
 
 	waitcastrt?
 	Spell[635].cast "##{target.id}"
@@ -277,7 +286,7 @@ def cmd_empathiclink target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1117].known? and Spell[1117].affordable?
 	return if checkmana <= 45
-	return if GameObj.npcs.count { |npc| is_valid_target npc } < 4
+	return if GameObj.npcs.count { |npc| valid_target? npc, target_types: ["bandit"]} < 4
 
 	waitcastrt?
 	Spell[1117].cast "##{target.id}"
@@ -290,7 +299,7 @@ def cmd_bind target
 	return unless Spell[214].known?
 
 	GameObj.npcs.each { |npc|
-		if npc.type =~ @target_types and npc.status !~ /frozen|dead|gone/i and checkmana > 50
+		if checkmana > 50 && valid_target?(npc, invalid_status: ["frozen", "dead", "gone"])
 			Spell[214].cast "##{npc.id}"
 		end
 	}
@@ -299,15 +308,19 @@ end
 def find_priority_target valid_targets
 	target = nil
 	pri = nil
-	valid_targets.each_with_index {|list, ii|
-		if list.empty?
-			next
-		end
-		target_regex = Regexp.new list.join("|")
-		target = GameObj.npcs.find { |npc| is_valid_target npc, valid_targets: target_regex }
-		pri = ii if target
-		break if target
+	targets = []
+	GameObj.npcs.each {|npc|
+		valid_targets.each_pair {|key, val|
+			if npc.name =~ /#{key}/ && valid_target?(npc, invalid_types: ["passive npc", "pet", "familiar"])
+				targets.push [npc, val]
+			end
+			}
 	}
+
+	if !targets.empty?
+		target, pri = targets.min_by { |pair|
+			pair[1] }
+	end
   [target, pri]
 end
 
@@ -326,7 +339,7 @@ def cmd_sympathy
   #Cast sympathy if enough creatures are present
   sympathy = Spell[1120]
   return unless sympathy.known? and sympathy.affordable?
-  return if GameObj.npcs.count { |npc| is_valid_target npc, target_types:/bandit/ } < 6
+  return if GameObj.npcs.count { |npc| is_valid_target npc, target_types: ["bandit"] } < 6
   sympathy.cast
 end
 
@@ -356,10 +369,15 @@ end
 
 def cmd_loot
 	#Loot dead bodies
+	nouns = nil
+	@vars_mutex.synchronize {
+		nouns = Vars[@script_name]['targets'].keys
+	}
+	targets = GameObj.npcs.select { |npc| valid_target? npc, valid_types: ["aggressive npc"], invalid_types: ["passive npc", "pet", "familiar"], invalid_status: nil}
 	#Must have at least one creature present
-	return if GameObj.npcs.count { |npc| npc.type =~ @target_types } == 0
+	return if targets.empty?
 	#All NPCs must be non-aggressive, or dead
-	return unless GameObj.npcs.all? { |npc| npc.type !~ @target_types || npc.status =~ /dead|gone/ }
+	return unless targets.all? {|npc| npc.status =~ /dead|gone/i}
 	return if poaching?
 	start_script "sloot"
 	wait_while{running?('sloot')}
@@ -369,14 +387,14 @@ def print_target_priority priority
 	#Prints out a single priority level
 	targets = nil
 	@vars_mutex.synchronize {
-		targets = Vars[@script_name]['targets'].fetch(priority, nil).dup
+		targets = Vars[@script_name]['targets'].select { |npc, pri| pri == priority}
 	}
 	if !targets
 		respond "Priority #{priority} not found!"
 		return
 	end
 
-	respond "Targets at priority #{priority}: #{targets}"
+	respond "Targets at priority #{priority}: #{targets.keys}"
 end
 
 def print_all_targets
@@ -384,8 +402,14 @@ def print_all_targets
 		if Vars[@script_name]['targets'].empty?
 			respond "No targets defined!"
 		else
-			Vars[@script_name]['targets'].each_with_index { |targets, ii|
-				respond "#{ii+1}) #{targets}"
+			priorities = Hash.new
+			Vars[@script_name]['targets'].each_pair { |target, pri|
+				priorities[pri] ||= []
+				priorities[pri].push target
+			}
+			sorted_pris = priorities.keys.sort
+			sorted_pris.each{ |pri|
+				respond "#{pri} #{priorities[pri]}"
 			}
 		end
 	}
@@ -407,7 +431,7 @@ def execute_commands
 			current = Vars[@script_name]['current']
 			profile = Vars[@script_name]['profiles'][current].dup
 			valid_targets = Vars[@script_name]['targets'].dup
-			use_target_list = !Vars[@script_name]['use_target_lists']
+			use_target_list = Vars[@script_name]['use_target_lists']
 		}
 
 		if profile != last_profile
@@ -424,6 +448,10 @@ def execute_commands
 		#Not poaching, valid commands
 		if !poaching? && cmds
 			#Only look for a target if we need it
+			if target && target.status =~ /dead|gone/
+				target = nil
+				target_pri = nil
+			end
 			if select_target && use_target_list
 				new_target, new_pri = find_priority_target valid_targets
 				if new_target && (!target || target.status =~ /dead|gone/ || !target_pri || new_pri < target_pri)
@@ -463,7 +491,7 @@ end
 Vars[@script_name] ||= Hash.new
 Vars[@script_name]['profiles'] ||= Hash.new
 Vars[@script_name]['current'] ||= 'default'
-Vars[@script_name]['targets'] ||= []
+Vars[@script_name]['targets'] ||= Hash.new
 Vars[@script_name]['use_target_lists'] = true
 
 #Sets up default profiles for current characters, can be deleted once configured
@@ -540,44 +568,30 @@ def handle_profile_cmds line
 end
 
 def handle_target_cmds line
+	#Process commands based around priority target lists
 	case line
-	when /targets list (?<pri>\d+)?/
+	when /targets list[ ]?(?<pri>\d+)?/
 		if $~[:pri]
 			print_target_priority $~[:pri].to_i
 		else
 			print_all_targets
 		end
-	when /targets rm (?<pri>\d+) (?<name>[\w ]+)/
-		pri = $~[:pri].to_i
-		if pri < 0 || pri > 100
-			respond "Priority must be within [0, 100]"
-			return
-		end
-
+	when /targets rm (?<name>[\w ]+)/
 		@vars_mutex.synchronize {
-			if Vars[@script_name]['targets'].length <= pri
-				respond "No targets at priority #{pri}"
+			found = Vars[@script_name]['targets'][pri].reject { |tgt| tgt == $~[:name] }
+			if found
+				respond "Removed #{$~[:name]} from target list"
 			else
-				Vars[@script_name]['targets'][pri].delete_if {|tgt| tgt == $~[:name] }
-				respond "Removed #{$~[:name]} from priority #{pri}"
+				respond "Could not find #{$~[:name]} in target list"
 			end
 		}
 	when /targets add (?<pri>\d+) (?<name>[\w ]+)/
 		pri = $~[:pri].to_i
 
-		if pri < 0 || pri > 100
-			respond "Priority must be within [0, 100]"
-			return
-		end
-
 		@vars_mutex.synchronize {
-			while Vars[@script_name]['targets'].length <= pri + 1
-				Vars[@script_name]['targets'].push Array.new()
-			end
-
-			Vars[@script_name]['targets'][pri].push $~[:name]
+			Vars[@script_name]['targets'][$~[:name]] = pri
 		}
-		respond "Added #{$~[:name]} to priority #{pri}"
+		respond "Added #{$~[:name]} as target priority #{pri}"
   when /targets all=?(?<flag>on|off)?/
     if $~[:flag]
       flag = $~[:flag] =~ /off/i
@@ -590,7 +604,8 @@ def handle_target_cmds line
       respond "Targetting any enemy in sight"
     end
 	when /targets help/
-		respond "Usage: #{cmd_string} targets [options]"
+		respond "Control prioritized list of targets to hunt"
+		respond "Usage: #{@cmd_string} targets [options]"
 		respond "  Handles the list of valid targets and priorities for hunting"
 		respond ""
 		respond "Options: "
@@ -600,7 +615,7 @@ def handle_target_cmds line
 	end
 end
 
-#Thread for accepting commands during operation
+#Procedure for accepting commands during operation
 command_hook = proc { |line|
 	case line
 	when /#{@cmd_string} update_group/
