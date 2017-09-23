@@ -311,7 +311,7 @@ def find_priority_target valid_targets
 	targets = []
 	GameObj.npcs.each {|npc|
 		valid_targets.each_pair {|key, val|
-			if npc.name =~ /#{key}/ && valid_target?(npc, invalid_types: ["passive npc", "pet", "familiar"])
+			if npc.name =~ /#{key}/ && valid_target?(npc, invalid_types: ["passive npc", "pet", "familiar", "companion"])
 				targets.push [npc, val]
 			end
 			}
@@ -326,7 +326,7 @@ end
 
 def find_any_target
 	target = GameObj.npcs.find { |npc|
-		if npc.type =~ /passive npc|pet|familiar/ || Vars[@script_name]['untargettable'].include?(npc.name)
+		if npc.type =~ /passive npc|pet|familiar|companion/ || Vars[@script_name]['untargettable'].include?(npc.name)
 			next
 		end
 		fput "target ##{npc.id}"
@@ -376,7 +376,7 @@ def cmd_loot
 	@vars_mutex.synchronize {
 		nouns = Vars[@script_name]['targets'].keys
 	}
-	targets = GameObj.npcs.select { |npc| !Vars[@script_name]['untargettable'].include?(npc.name) && valid_target?(npc, invalid_types: ["passive npc", "pet", "familiar"], invalid_status: nil)}
+	targets = GameObj.npcs.select { |npc| !Vars[@script_name]['untargettable'].include?(npc.name) && valid_target?(npc, invalid_types: ["passive npc", "pet", "familiar", "companion"], invalid_status: nil)}
 	#Must have at least one creature present
 	return if targets.empty?
 	#All NPCs must be non-aggressive, or dead
