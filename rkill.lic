@@ -277,7 +277,7 @@ def cmd_bone target
 	return unless Spell[1106].known? and Spell[1106].affordable?
 
 	waitcastrt?
-	Spell[1106].cast "##{target.id}"
+	fput "incant 1106"
 	change_stance "defensive"
 	waitcastrt?
 end
