@@ -1,0 +1,170 @@
+#group script for Ericos. 
+
+friendlist = ["Ericos", "Predest", "Szyxt", "Berrasi"]
+friendlist.map!(&:downcase)
+
+loop {
+    line = get
+    targetName = 
+    targetRequest =
+    if line =~ /^(\w+) whispers(?: to the group)?, "(\w+)\s?(\w+)?\."/
+    elsif line =~ /\[(?:egroup|Private)\]-\w+:(\w+): "(\w+)\s?(\w+)?"/
+    end
+    if !friendlist.include?($1.downcase)
+        next
+    end
+    targetName = $1.downcase
+    targetRequest = $2.downcase
+    if !$3.nil? then
+        targetName = $3.downcase
+    end
+    if targetName then
+#		sleep rand(5)
+        case targetRequest
+     
+	when "spellup"
+			sleep rand(5)
+            if running?('waggle') then
+                fput "whisper #{targetName} I am sorry. I am already spelling someone up at the moment."
+            else
+                start_script( 'waggle', [ targetName ] )
+            end
+   
+	when "spellupself"
+			sleep rand(5)
+		#todo spellup self option?
+            if running?('waggle') then
+                fput "whisper #{targetName} I am sorry. I am already spelling someone up at the moment."
+            else
+                start_script( 'waggle' )
+            end
+   
+	when "hug"
+			sleep rand(5)
+            fput "hug " +targetName
+			
+	when "kiss"
+			sleep rand(5)
+			fput "kiss " +targetName
+			
+	when "lick"
+			sleep rand(5)
+			fput "lick " +targetName
+			
+	when "lay"
+			sleep rand(5)
+			fput "lay"
+	
+	when "crawl"
+			sleep rand(5)
+			fput "crawl " +targetName
+	
+	when "bark"
+			sleep rand(5)
+			fput "bark " +targetName
+	
+	when "sit"
+			sleep rand(5)
+			if running?('unstun') then pause_script('unstun')
+				fput "sit " +targetName
+			
+			else
+			fput "sit " +targetName
+			end
+			
+	when "stand"
+			sleep rand(5)
+			if running?('unstun') then unpause_script('unstun')	
+				fput "stand"
+			
+			else
+			fput "stand"
+			end
+			
+	when "manna"
+			sleep rand(5)
+			fput "whisper #{targetName} Mana:#{checkmana}/#{maxmana}"
+			
+	when "ready"
+			start_script( 'rdy' )
+			start_script( 'unstun')
+			
+	when "guard"
+			fput "ask guard about bounty"
+			sleep rand(5)
+			fput "nod"
+			
+	when "task"
+			fput "ask task about bounty"
+			sleep rand(5)
+			fput "nod"
+	
+	when "removal"
+			fput "ask task about removal"
+			fput "ask task about removal"
+			sleep rand(5)
+			fput "nod"
+			
+	when "rkill"
+			start_script( 'rkill' )
+			sleep 0.5
+			if running?('rkill') then fput "nod"
+			
+			else
+			sleep rand(5)
+			fput "shake head"
+			end
+			
+	when "rest"
+			stop_script( 'rkill' )
+			fput "stance defensive"
+			sleep 0.5
+			if running?('rkill') then fput "shake head"
+			
+			else
+			sleep rand(5)
+			fput "nod"
+			end
+			
+	when "heal"
+			if Char.prof == "Empath"
+				start_script( 'heal', [ targetName ] )
+			end
+		
+	when "deposit"
+			fput "deposit all"
+			
+	when "turn"
+			name = Char.name
+			sleep rand(5)
+			fput "turn #{name} disk"
+			
+	when "boxes"
+			sleep rand(5)
+			fput "sheathe"
+			start_script "foreach" , [ "box in inv;drop"]
+			wait_while { running?('foreach') }
+			fput "unsheathe"
+	
+	when "stay"
+	
+			stop_script( 'follow2' )
+			sleep rand(5)
+			fput "nod"
+			
+	when "follow"
+			
+			stop_script( 'follow2' )
+			sleep 0.5
+			start_script( 'follow2', [ targetName ] )
+			fput "nod"
+			
+	when "tonis"
+			if Char.prof == "Bard"
+				fput "whisper #{targetName} Mana:#{checkmana}/#{maxmana}"
+				Spell[1035].cast
+			end
+		
+		end
+	end
+}
