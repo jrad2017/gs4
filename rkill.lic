@@ -1,13 +1,27 @@
 =begin
-Script for hunting with Ericos et al.
+	rkill.lic: Hunting with target prioritization and online adjustable attack profiles.
+
+	This script allows setting up sequences of commands known as profiles, and having characters execute those sequences during hunting. Creatures are targetted in a semi-stable fashion, which allows for multiple characters operating this script at the same time to focus-fire creatures. Includes some ideas in bigshot.lic.
+
+	Author: Ericos
+	Contributors: Ineum
+	Game: Gemstone IV
+	tags: hunting
+	Version: 2.0
+
+	changelog:
+		2.0 (2017-09-23):
+			Added target priorities for focusing on certain enemies type before others
+			Improved group join/leave detection
+			Wide ranging improvements to logic and robustness.
+		1.5:
+			Added logic for modifying attack profiles
+		1.0:
+			Initial release with attack profiles
 =end
 
 #These people are always considered part of the group, regardless of membership
 @core_group = ["Ericos", "Predest", "Alyssea", "Archaeron", "Draccor", "Naina", "Szyxt"]
-#Default set of NPC types to consider attack
-@target_types = /aggressive npc|undead|bandit|grimswarm/
-#Default set of NPCs to target
-@valid_targets = //
 
 @script_name = script.name
 
@@ -18,7 +32,7 @@ end
 
 def get_current_group
 	#Get members of current group
-	group = []
+	group = [name]
 	fput "group"
 	while line = get
 		case line
@@ -38,7 +52,7 @@ end
 	@current_group = get_current_group
 }
 
-def poaching
+def poaching?
 	#Test if someone in the room is unexpected, to avoid poaching
 	#Get minimal list of names to care about
 	pcs = Set.new @core_group
@@ -46,7 +60,8 @@ def poaching
 		pcs.merge @current_group
 	}
 	party_members = Regexp.new pcs.to_a.join("|")
-	GameObj.pcs.any? {|pc| pc.name !~ party_members}
+	#Also check disk names against party members
+	GameObj.pcs.any? {|pc| pc.name !~ party_members} || GameObj.loot.any? {|obj| obj.noun == "disk" && obj.name !~ party_members}
 end
 
 def change_stance new_stance, force: true
@@ -70,9 +85,22 @@ def stand
 	end
 end
 
-def is_valid_target npc, valid_targets:@valid_targets, target_types:@target_types
-  #Function which determines if an NPC is a valid target for combat
-  npc.name =~ valid_targets and npc.status !~ /dead|gone/i and npc.type =~ target_types
+def valid_target? npc, invalid_types:nil, invalid_status: ["dead", "gone"], valid_types: nil
+  #Function which determines if an NPC is a valid target for combat, regardless of name
+	#Must not be of invalid_types or invalid_status, and must be of valid_types, if each one is set
+	valid_types_re = nil
+	invalid_types_re = nil
+	invalid_status_re = nil
+	if invalid_types && invalid_types.is_a?(Array) && !invalid_types.empty?
+		invalid_types_re = Regexp.new invalid_types.join("|")
+	end
+	if valid_types && valid_types.is_a?(Array) && !valid_types.empty?
+		valid_types_re = Regexp.new valid_types.join("|")
+	end
+	if invalid_status && invalid_status.is_a?(Array) && !invalid_status.empty?
+		invalid_status_re = Regexp.new invalid_status.join("|")
+	end
+	(valid_types_re.nil? || npc.type =~ valid_types_re) && (invalid_status_re.nil? || npc.status !~ invalid_status_re) && (invalid_types_re.nil? || npc.type !~ invalid_types_re)
 end
 
 def maintain_spells spells, min_mana: -1, max_mana: -1
@@ -91,38 +119,45 @@ def maintain_spells spells, min_mana: -1, max_mana: -1
 end
 
 def cmd_gos
-  sigils = [Spell[9705], Spell[9707], Spell[9708], Spell[9710]]
+  sigils = [Spell[9707], Spell[9708], Spell[9710]]
+	
+	if Spell[9715].known?
+		sigils.push Spell[9715]
+	elsif Spell[9705].known?
+		sigils.push Spell[9705]
+	end
+
 	maintain_spells sigils, min_mana: 15
 end
 
 def cmd_power
-    power = [Spell[9718]]
-    maintain_spells power, max_mana: 100
-    # Pause to ensure lich can track stamina/mana
-    pause 0.5
+  power = [Spell[9718]]
+  maintain_spells power, max_mana: 100
+  # Pause to ensure lich can track stamina/mana
+  pause 0.5
 end
 
 def cmd_col
-    signs = [Spell[9904], Spell[9907], Spell[9908], Spell[9912], Spell[9913]]
-    maintain_spells signs, min_mana: 5
+  signs = [Spell[9904], Spell[9907], Spell[9908], Spell[9912], Spell[9913]]
+  maintain_spells signs, min_mana: 5
 end
 
 def cmd_voln
-    symbols = [Spell[9805], Spell[9806]]
-    maintain_spells symbols
+  symbols = [Spell[9805], Spell[9806]]
+  maintain_spells symbols
 end
 
 def cmd_smastery
-    #Check if cooldown is in effect
-    return if Spell[9604].active?
-    maintain_spells [Spell[9603]]
+  #Check if cooldown is in effect
+  return if Spell[9604].active?
+  maintain_spells [Spell[9603]]
 end
 
 def cmd_fury target
 	return unless Spell[635].known? and Spell[635].affordable?
 	return if checkmana <= 45
 	return if(hiding?)
-	return if GameObj.npcs.count { |npc| is_valid_target npc } < 5
+	return if GameObj.npcs.count { |npc| valid_target? npc, target_types: ["aggressive npc"]} < 5
 
 	waitcastrt?
 	Spell[635].cast "##{target.id}"
@@ -135,12 +170,12 @@ def cmd_spike target
 	return if checkmana <= 32
 	return if(hiding?)
 	return unless Spell[616].known? and Spell[616].affordable?
-	
+
 	waitcastrt?
 	Spell[616].cast "##{target.id}"
 	change_stance('guarded')
 	waitcastrt?
-	
+
 end
 
 def cmd_swarm target
@@ -266,17 +301,17 @@ def cmd_bone target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1106].known? and Spell[1106].affordable?
 
-		waitcastrt?
-		Spell[1106].cast "##{target.id}"
-		change_stance "defensive"
-		waitcastrt?
+	waitcastrt?
+	fput "incant 1106"
+	change_stance "defensive"
+	waitcastrt?
 end
 
 def cmd_empathiclink target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1117].known? and Spell[1117].affordable?
 	return if checkmana <= 45
-	return if GameObj.npcs.count { |npc| is_valid_target npc } < 4
+	return if GameObj.npcs.count { |npc| valid_target? npc, target_types: ["bandit"]} < 4
 
 	waitcastrt?
 	Spell[1117].cast "##{target.id}"
@@ -289,25 +324,50 @@ def cmd_bind target
 	return unless Spell[214].known?
 
 	GameObj.npcs.each { |npc|
-		if npc.type =~ @target_types and npc.status !~ /frozen|dead|gone/i and checkmana > 50
+		if checkmana > 50 && valid_target?(npc, invalid_status: ["frozen", "dead", "gone"])
 			Spell[214].cast "##{npc.id}"
 		end
 	}
 end
 
-def cmd_target valid_targets
-	target = GameObj.npcs.find { |npc| is_valid_target npc, valid_targets: valid_targets }
-	if target
-		fput "target ##{target.id}"
+def find_priority_target valid_targets
+	target = nil
+	pri = nil
+	targets = []
+	GameObj.npcs.each {|npc|
+		valid_targets.each_pair {|key, val|
+			if npc.name =~ /#{key}/ && valid_target?(npc, invalid_types: ["passive npc", "pet", "familiar", "companion"])
+				targets.push [npc, val]
+			end
+			}
+	}
+
+	if !targets.empty?
+		target, pri = targets.min_by { |pair|
+			pair[1] }
 	end
-  target
+  [target, pri]
+end
+
+def find_any_target
+	target = GameObj.npcs.find { |npc|
+		if npc.type =~ /passive npc|pet|familiar|companion/ || Vars[@script_name]['untargettable'].include?(npc.name)
+			next
+		end
+		fput "target ##{npc.id}"
+		line = get until line =~ /^Usage|^You are now (?<success>targeting)|^You do not have a target\.|You can only target creatures and players\.|You can't target|^Could not find a valid target\./
+		if !$~[:success]
+			Vars[@script_name]['untargettable'].push npc.name
+		end
+		$~[:success]
+	}
 end
 
 def cmd_sympathy
   #Cast sympathy if enough creatures are present
   sympathy = Spell[1120]
   return unless sympathy.known? and sympathy.affordable?
-  return if GameObj.npcs.count { |npc| is_valid_target npc, target_types:/bandit/ } < 6
+  return if GameObj.npcs.count { |npc| is_valid_target npc, target_types: ["bandit"] } < 6
   sympathy.cast
 end
 
@@ -316,7 +376,7 @@ def cmd_sweep target
 	return if target.status =~ /kneel|sit|lying|stunned/
 	return if(hiding?)
 	return if checkstamina <= 45
-	
+
 	change_stance('offensive')
 	fput "cman sweep ##{target.id}"
 	change_stance('defensive')
@@ -328,7 +388,7 @@ def cmd_feint target
 	return if target.status =~ /kneel|sit|lying|stunned/
 	return if(hiding?)
 	return if checkstamina <= 45
-	
+
 	change_stance('offensive')
 	fput "cman feint ##{target.id}"
 	change_stance('defensive')
@@ -337,35 +397,71 @@ end
 
 def cmd_loot
 	#Loot dead bodies
+	nouns = nil
+	@vars_mutex.synchronize {
+		nouns = Vars[@script_name]['targets'].keys
+	}
+	targets = GameObj.npcs.select { |npc| !Vars[@script_name]['untargettable'].include?(npc.name) && valid_target?(npc, invalid_types: ["passive npc", "pet", "familiar", "companion"], invalid_status: nil)}
 	#Must have at least one creature present
-	return if GameObj.npcs.count { |npc| npc.type =~ @target_types } == 0
+	return if targets.empty?
 	#All NPCs must be non-aggressive, or dead
-	return unless GameObj.npcs.all? { |npc| npc.type !~ @target_types || npc.status =~ /dead|gone/ }
+	return unless targets.all? {|npc| npc.status =~ /dead|gone/i}
+	return if poaching?
 	start_script "sloot"
 	wait_while{running?('sloot')}
 end
 
-def print_profile_info pname, profile
-	#Pretty printer for profile commands
-  respond "#{pname} is set to: "
-  profile.each_with_index { |cmd, ii|
-    respond "  #{ii + 1}) #{cmd}"
-  }
+def print_target_priority priority
+	#Prints out a single priority level
+	targets = nil
+	@vars_mutex.synchronize {
+		targets = Vars[@script_name]['targets'].select { |npc, pri| pri == priority}
+	}
+	if !targets
+		respond "Priority #{priority} not found!"
+		return
+	end
+
+	respond "Targets at priority #{priority}: #{targets.keys}"
 end
 
-def execute_commands valid_targets
+def print_all_targets
+	@vars_mutex.synchronize {
+		if Vars[@script_name]['targets'].empty?
+			respond "No targets defined!"
+		else
+			priorities = Hash.new
+			Vars[@script_name]['targets'].each_pair { |target, pri|
+				priorities[pri] ||= []
+				priorities[pri].push target
+			}
+			sorted_pris = priorities.keys.sort
+			sorted_pris.each{ |pri|
+				respond "#{pri} #{priorities[pri]}"
+			}
+		end
+	}
+end
+
+def execute_commands
 	#This defines the core hunting loop for all characters, executing a sequence of functions from a specified profile
 	target = nil
+	target_pri = nil
 	last_profile = nil
 	select_target = false
 	cmds = []
 	loop {
 		#Rebuild list of commands each loop, for on-the-fly profile switches
 		profile = []
+		valid_targets = nil
+		use_target_list = true
 		@vars_mutex.synchronize {
 			current = Vars[@script_name]['current']
 			profile = Vars[@script_name]['profiles'][current].dup
+			valid_targets = Vars[@script_name]['targets'].dup
+			use_target_list = Vars[@script_name]['use_target_lists']
 		}
+
 		if profile != last_profile
 			select_target = false
 			cmds = profile.collect { |cmd|
@@ -375,12 +471,27 @@ def execute_commands valid_targets
 			}
 			last_profile = profile
 		end
+
+		deltaT = 0.0
 		#Not poaching, valid commands
-		if !poaching && cmds
-			if select_target && (!target || target.status =~ /dead|gone/)
-				target = cmd_target valid_targets
+		if !dead? && !poaching? && cmds
+			#Only look for a target if we need it
+			if target && target.status =~ /dead|gone/
+				target = nil
+				target_pri = nil
+			end
+			if select_target && use_target_list
+				new_target, new_pri = find_priority_target valid_targets
+				if new_target && (!target || target.status =~ /dead|gone/ || !target_pri || new_pri < target_pri)
+					target = new_target
+					target_pri = new_pri
+					fput "target ##{target.id}"
+				end
+			elsif select_target && (!target || target.status =~ /dead|gone/)
+				target = find_any_target
 			end
 
+			startTime = Time.now
 			#Executes each command in order, providing target if requested
 			cmds.each{ |cmd|
 				if cmd.parameters[0].include?(:target)
@@ -391,9 +502,12 @@ def execute_commands valid_targets
 					cmd.call
 				end
 			}
+			deltaT = (Time.now - startTime)
 		end
-		# Always pause half a second to not spam commands too fast
-		sleep 0.5
+		if deltaT < 0.5
+			# Cap at 0.5s to not spam commands too fast
+			sleep 0.5 - deltaT
+		end
 	}
 end
 
@@ -403,9 +517,11 @@ end
 #NOTE: At this point, only one thread is messing with these vars, so there's no need to mutex.
 #Sets up basic configuration structures
 Vars[@script_name] ||= Hash.new
-Vars[@script_name] ||= Hash.new
 Vars[@script_name]['profiles'] ||= Hash.new
 Vars[@script_name]['current'] ||= 'default'
+Vars[@script_name]['targets'] ||= Hash.new
+Vars[@script_name]['untargettable'] ||= []
+Vars[@script_name]['use_target_lists'] = true
 
 #Sets up default profiles for current characters, can be deleted once configured
 if !Vars[@script_name]['profiles'].include? 'default'
@@ -434,7 +550,7 @@ def handle_profile_cmds line
 				respond "* #{profile}"
 			}
 		}
-	when /profile set (?<pname>\w+)=(?<cmds>[\w, ]+)/
+	when /profile set (?<pname>\w+)\s*=\s*(?<cmds>[\w, ]+)/
 		#Sets a profile to a string of commands
 		cmds = []
 		pname = $~[:pname]
@@ -457,15 +573,19 @@ def handle_profile_cmds line
 		pname = $~[:pname]
 		@vars_mutex.synchronize {
 			if Vars[@script_name]['profiles'].include? pname
-				print_profile_info pname, Vars[@script_name]['profiles'][pname]
+				respond "#{pname}=#{Vars[@script_name]['profiles'][pname].join(",")}"
 			else
-				respond "#{pname} not a profile for #{name}"
+				respond "#{pname} not a valid profile!"
 			end
 		}
-	when /profile current/
-		if line =~ /current (?<set>\w+)/ && $~[:set]
-			@vars_mutex.synchronize { Vars[@script_name]['current'] = $~[:set] }
-		end
+	when /profile current\s?(?<set>\w+)?/
+		@vars_mutex.synchronize {
+			if Vars[@script_name]['profiles'].include? $~[:set]
+				Vars[@script_name]['current'] = $~[:set]
+			else
+				respond "#{$~[:set]} is not a valid profile!"
+			end
+		}
 		respond "#{name} is using profile #{Vars[@script_name]['current']}"
 	when /profile help/
 		respond "Usage: #{@cmd_string} profile [options]"
@@ -480,18 +600,101 @@ def handle_profile_cmds line
 	end
 end
 
-#Thread for accepting commands during operation
+def handle_target_cmds line
+	#Process commands based around priority target lists
+	case line
+	when /targets list\s?(?<pri>\d+)?/
+		if $~[:pri]
+			print_target_priority $~[:pri].to_i
+		else
+			print_all_targets
+		end
+	when /targets rm\s+(?<name>[\w "']+)/
+		name = $~[:name].strip.delete '"'
+		@vars_mutex.synchronize {
+			found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == name }
+			if found
+				respond "Removed #{name} from target list"
+			else
+				respond "Could not find #{name} in target list"
+			end
+		}
+	when /targets add (?<pri>\d+)\s+[\[]?(?<name>[,\w "']+)[\]]?/
+		pri = $~[:pri].to_i
+
+		names = $~[:name].split(",")
+		@vars_mutex.synchronize {
+			names.each{ |name|
+				Vars[@script_name]['targets'][name.strip.delete '"'] = pri
+			}
+		}
+		respond "Added #{$~[:name]} as target priority #{pri}"
+  when /targets all=?(?<flag>on|off)?/
+    if $~[:flag]
+      flag = $~[:flag] =~ /off/i
+      @vars_mutex.synchronize { Vars[@script_name]['use_target_lists'] = flag }
+    end
+
+    if Vars[@script_name]['use_target_lists']
+      respond "Using targetting lists"
+    else
+      respond "Targetting any enemy in sight"
+    end
+	when /targets help/
+		respond "Control prioritized list of targets to hunt"
+		respond "Usage: #{@cmd_string} targets [options]"
+		respond "  Handles the list of valid targets and priorities for hunting"
+		respond ""
+		respond "Options: "
+		respond "  list [$priority]: Prints all creatures, or all creatures of a specified priority level"
+		respond "  add $priority $name: Adds $name to $priority level"
+		respond "  rm $priority $name: Removes $name from $priority level"
+	end
+end
+
+#Procedure for accepting commands during operation
 command_hook = proc { |line|
 	case line
-	when /update_group/
+	when /#{@cmd_string} update_group/
 		#Updates group for poaching tests
 		@group_mutex.synchronize { @current_group = get_current_group }
 		nil
-	when /commands/
+	when /#{@cmd_string} commands/
 		respond "Available commands: #{@all_cmds}"
 		nil
-	when /profile/
+	when /#{@cmd_string} profile/
 		handle_profile_cmds line
+		nil
+	when /#{@cmd_string} targets/
+		handle_target_cmds line
+		nil
+	when /#{@cmd_string}.*/
+		respond "Script for automating attack patterns and target selection"
+		respond "Usage: #{@cmd_string} [command] [options]"
+		respond ""
+		respond "Commands:"
+		respond "  update_group: Forces upating the group for poaching determination"
+		respond "  commands: Lists available commands for profiles"
+		respond "  profile: Commands for configuring and setting attack profiles"
+		respond "  targets: Commands for setting target priorities"
+	else
+		line
+	end
+}
+
+#Procedure for processing people joining/leaving the group organically
+group_hook = proc {|line|
+	case line
+	when /$(?<name>\w+) joins (your|\w+'s) group.^/
+		#Add person to group
+		@group_mutex.synchronize {
+			@current_group.push $~[:name]
+		}
+		nil
+	when /$(?<name>\w+) leaves (your|\w+'s) group.^/
+		@group_mutex.synchronize {
+			@current_group.delete $~[:name]
+		}
 		nil
 	else
 		line
@@ -499,18 +702,10 @@ command_hook = proc { |line|
 }
 
 UpstreamHook.add @cmd_string, command_hook
-before_dying {UpstreamHook.remove @cmd_string}
+DownstreamHook.add "#{script.name} update_group", group_hook
+before_dying {
+	UpstreamHook.remove @cmd_string
+	DownstreamHook.remove "#{script.name} update_group"
+}
 
-#Valid targets are listed here on a per-character basis
-valid_targets = //
-case name
-when 'Alyssea'
-  valid_targets = /(warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|janissary|herald|griffin|scout|adept|lurk|fanatic|monstrosity|shaper|sentinel|lesser minotaur|krag yeti|minotaur warrior|minotaur magus|jarl|krynch|elder|being|goleras|moulis|shrickhen|champion|seer|initiate|dogmatist|hierophant|supplicant|raving lunatic|naisirc|seraceris|vvrael witch|caedera|csetairi|vvrael warlock|greater krynch|earth elemental|vaespilon|n'ecare)/i
-when 'Archaeron'
-	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen|raving lunatic|naisirc|seraceris|vvrael witch|caedera|csetairi|vvrael warlock|greater krynch|earth elemental)/i
-when 'Predest'
-	valid_targets = /(rat|golem|minotaur magus|minotaur warrior|minotaur magi|krag yeti|krag dweller|lesser minotaur|soldier|thrak|manticore|grey orc|crystal golem|forest troll|hill troll|war troll|warrior|mercenary|puma|warfarer|rogue|theif|thug|bandit|outlaw|brigand|marauder|highwayman|robber|mugger|banshee|troll king|dweller|harbinger|elemental|seeker|ice golem|sabre-tooth tiger|Shaman|Mystic|Mastiff|stone giant|Jarl|Elder|stone troll|fire guardian|Krolvin dissembler|Krolvin|minotaur|witch|ranger|raider|soldier|fighter|hunter|archer|sorcerer|wizard|cleric|barbarian|mage|warrior|rogue|acolyte|skirmisher|adept|scout|scourge|sniper|dissembler|empath|guard|witch|warlock|sorceress|marauder|thief|tsark|golem|sprite|griffin|grifflet|yeti|dogmatist|hierophant|supplicant|farlook|boar|direbear|direwolf|viper|goleras|moulis|shrickhen|raving lunatic|vvrael witch|caedera|csetairi|vvrael warlock|greater krynch|earth elemental)/i
-#when 'Ericos' #This isn't here, since Ericos never targets via this script
-end
-
-execute_commands valid_targets
+execute_commands
