@@ -458,12 +458,19 @@ def cmd_loot
 	@vars_mutex.synchronize {
 		nouns = Vars[@script_name]['targets'].keys
 	}
-	targets = GameObj.npcs.select { |npc| !Vars[@script_name]['untargettable'].include?(npc.name) && valid_target?(npc, invalid_types: ["passive npc", "pet", "familiar", "companion"], invalid_status: nil)}
-	#Must have at least one creature present
-	return if targets.empty?
-	#All NPCs must be non-aggressive, or dead
-	return unless targets.all? {|npc| npc.status =~ /dead|gone/i}
+	safe_loot = true
+	@vars_mutex.synchronize {safe_loot = Vars[@script_name]['safe_loot']}
+	if safe_loot
+		targets = GameObj.npcs.select { |npc| !Vars[@script_name]['untargettable'].include?(npc.name) && valid_target?(npc, invalid_types: ["passive npc", "pet", "familiar", "companion"], invalid_status: nil)}
+		#Must have at least one creature present
+		return if targets.empty?
+		#All NPCs must be non-aggressive, or dead
+		return unless targets.all? {|npc| npc.status =~ /dead|gone/i}
+	else
+		return unless GameObj.npcs.any? {|npc| npc.status =~ /dead/ }
+	end
 	return if poaching?
+	waitrt?
 	start_script "sloot"
 	wait_while{running?('sloot')}
 end
@@ -590,6 +597,9 @@ Vars[@script_name]['untargettable'] ||= []
 Vars[@script_name]['core_group'] ||= []
 if !Vars[@script_name].include? 'use_target_lists'
 	Vars[@script_name]['use_target_lists'] = true
+end
+if !Vars[@script_name].include? 'safe_loot'
+	Vars[@script_name]['safe_loot'] = true
 end
 
 def parse_names names
@@ -776,6 +786,18 @@ command_hook = proc { |line|
 	when /#{@cmd_string} targets/
 		handle_target_cmds line
 		nil
+	when /#{@cmd_string} safe_loot\s+(?<flag>off|no|0|yes|on|1|true|false)?/i
+		if $~[:flag]
+			flag = $~[:flag] =~ /yes|on|1|true/i
+			@vars_mutex.synchronize {Vars[@script_name]['safe_loot'] = flag}
+		end
+		flag = true
+		@vars_mutex.synchronize {Vars[@script_name]['safe_loot'] = flag}
+		if flag
+			respond "Safe looting is on"
+		else
+			respond "Safe looting is off"
+		end
 	when /#{@cmd_string}.*/
 		respond "Script for automating attack patterns and target selection"
 		respond "Usage: #{@cmd_string} [command] [options]"
