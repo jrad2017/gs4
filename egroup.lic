@@ -75,6 +75,20 @@ loop {
 	when "ready"
 		start_script( 'rdy' )
 		start_script( 'unstun')
+  when "bounty"
+    found_stats = false
+    fput "bounty"
+    while line2 = get
+      case line2
+      when /You have succeeded at/
+        found_stats = true
+      else
+        if found_stats && !line2.empty?
+          fput "whisper #{targetName} #{line2}"
+          break
+        end
+      end
+    end
 	when "guard"
 		fput "ask guard about bounty"
 		sleep rand(5)
