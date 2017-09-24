@@ -119,7 +119,14 @@ def maintain_spells spells, min_mana: -1, max_mana: -1
 end
 
 def cmd_gos
-  sigils = [Spell[9705], Spell[9707], Spell[9708], Spell[9710]]
+  sigils = [Spell[9707], Spell[9708], Spell[9710]]
+	
+	if Spell[9715].known?
+		sigils.push Spell[9715]
+	elsif Spell[9705].known?
+		sigils.push Spell[9705]
+	end
+
 	maintain_spells sigils, min_mana: 15
 end
 
