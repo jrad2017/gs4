@@ -602,22 +602,23 @@ def handle_target_cmds line
 		else
 			print_all_targets
 		end
-	when /targets rm (?<name>[\w ]+)/
+	when /targets rm\s+(?<name>[\w "']+)/
+		name = $~[:name].strip.delete '"'
 		@vars_mutex.synchronize {
-			found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == $~[:name] }
+			found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == name }
 			if found
-				respond "Removed #{$~[:name]} from target list"
+				respond "Removed #{name} from target list"
 			else
-				respond "Could not find #{$~[:name]} in target list"
+				respond "Could not find #{name} in target list"
 			end
 		}
-	when /targets add (?<pri>\d+) (?<name>[,\w ]+)/
+	when /targets add (?<pri>\d+)\s+[\[]?(?<name>[,\w "']+)[\]]?/
 		pri = $~[:pri].to_i
 
 		names = $~[:name].split(",")
 		@vars_mutex.synchronize {
 			names.each{ |name|
-				Vars[@script_name]['targets'][name.strip] = pri
+				Vars[@script_name]['targets'][name.strip.delete '"'] = pri
 			}
 		}
 		respond "Added #{$~[:name]} as target priority #{pri}"
