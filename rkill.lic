@@ -543,7 +543,7 @@ def handle_profile_cmds line
 				respond "* #{profile}"
 			}
 		}
-	when /profile set (?<pname>\w+)=(?<cmds>[\w, ]+)/
+	when /profile set (?<pname>\w+)\s*=\s*(?<cmds>[\w, ]+)/
 		#Sets a profile to a string of commands
 		cmds = []
 		pname = $~[:pname]
@@ -568,13 +568,17 @@ def handle_profile_cmds line
 			if Vars[@script_name]['profiles'].include? pname
 				respond "#{pname}=#{Vars[@script_name]['profiles'][pname].join(",")}"
 			else
-				respond "#{pname} not a profile for #{name}"
+				respond "#{pname} not a valid profile!"
 			end
 		}
-	when /profile current/
-		if line =~ /current (?<set>\w+)/ && $~[:set]
-			@vars_mutex.synchronize { Vars[@script_name]['current'] = $~[:set] }
-		end
+	when /profile current\s?(?<set>\w+)?/
+		@vars_mutex.synchronize {
+			if Vars[@script_name]['profiles'].include? $~[:set]
+				Vars[@script_name]['current'] = $~[:set]
+			else
+				respond "#{$~[:set]} is not a valid profile!"
+			end
+		}
 		respond "#{name} is using profile #{Vars[@script_name]['current']}"
 	when /profile help/
 		respond "Usage: #{@cmd_string} profile [options]"
@@ -592,7 +596,7 @@ end
 def handle_target_cmds line
 	#Process commands based around priority target lists
 	case line
-	when /targets list[ ]?(?<pri>\d+)?/
+	when /targets list\s?(?<pri>\d+)?/
 		if $~[:pri]
 			print_target_priority $~[:pri].to_i
 		else
