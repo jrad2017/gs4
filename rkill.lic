@@ -52,16 +52,23 @@ end
 	@current_group = get_current_group
 }
 
+@new_room = true
+@poaching = true
+
 def poaching?
 	#Test if someone in the room is unexpected, to avoid poaching
 	#Get minimal list of names to care about
-	pcs = Set.new @core_group
-	@group_mutex.synchronize {
-		pcs.merge @current_group
-	}
-	party_members = Regexp.new pcs.to_a.join("|")
-	#Also check disk names against party members
-	GameObj.pcs.any? {|pc| pc.name !~ party_members} || GameObj.loot.any? {|obj| obj.noun == "disk" && obj.name !~ party_members}
+	if @new_room
+		pcs = Set.new @core_group
+		@group_mutex.synchronize {
+			pcs.merge @current_group
+		}
+		party_members = Regexp.new pcs.to_a.join("|")
+		#Also check disk names against party members
+		@poaching = GameObj.pcs.any? {|pc| pc.name !~ party_members} || GameObj.loot.any? {|obj| obj.noun == "disk" && obj.name !~ party_members}
+		@new_room = false
+	end
+	@poaching
 end
 
 def change_stance new_stance, force: true
@@ -696,6 +703,9 @@ group_hook = proc {|line|
 			@current_group.delete $~[:name]
 		}
 		nil
+	when /$Obvious exits:/
+		@new_room = true
+		line
 	else
 		line
 	end
