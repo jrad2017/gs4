@@ -600,7 +600,7 @@ def handle_target_cmds line
 		end
 	when /targets rm (?<name>[\w ]+)/
 		@vars_mutex.synchronize {
-			found = Vars[@script_name]['targets'][pri].reject { |tgt| tgt == $~[:name] }
+			found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == $~[:name] }
 			if found
 				respond "Removed #{$~[:name]} from target list"
 			else
