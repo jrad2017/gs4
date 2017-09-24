@@ -587,8 +587,10 @@ Vars[@script_name]['profiles'] ||= Hash.new
 Vars[@script_name]['current'] ||= 'default'
 Vars[@script_name]['targets'] ||= Hash.new
 Vars[@script_name]['untargettable'] ||= []
-Vars[@script_name]['use_target_lists'] = true
 Vars[@script_name]['core_group'] ||= []
+if !Vars[@script_name].include? 'use_target_lists'
+	Vars[@script_name]['use_target_lists'] = true
+end
 
 def parse_names names
 	#Parse string of names into an array
