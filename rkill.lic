@@ -467,7 +467,7 @@ def execute_commands
 
 		deltaT = 0.0
 		#Not poaching, valid commands
-		if !poaching? && cmds
+		if !dead? && !poaching? && cmds
 			#Only look for a target if we need it
 			if target && target.status =~ /dead|gone/
 				target = nil
