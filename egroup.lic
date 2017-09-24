@@ -5,8 +5,6 @@ friendlist.map!(&:downcase)
 
 loop {
   line = get
-  targetName =
-  targetRequest =
   if line =~ /^(\w+) whispers(?: to the group)?, "(\w+)\s?(\w+)?\."/
   elsif line =~ /\[(?:egroup|Private)\]-\w+:(\w+): "(\w+)\s?(\w+)?"/
   end
