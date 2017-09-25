@@ -120,7 +120,7 @@ end
 
 def cmd_gos
   sigils = [Spell[9707], Spell[9708], Spell[9710]]
-	
+
 	if Spell[9715].known?
 		sigils.push Spell[9715]
 	elsif Spell[9705].known?
@@ -494,6 +494,7 @@ def execute_commands
 			startTime = Time.now
 			#Executes each command in order, providing target if requested
 			cmds.each{ |cmd|
+				wait_while {running?("go2") || running?("wander")}
 				if cmd.parameters[0].include?(:target)
 					if target
 						cmd.call target
