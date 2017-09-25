@@ -72,8 +72,8 @@ def poaching?
 		}
 		party_members = Regexp.new pcs.to_a.join("|"), Regexp::IGNORECASE
 		#Build list of PC's not recognized, and also check disk names against party members
-		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members}
-		disk_pcs = GameObj.loot.select {|obj| obj.noun == "disk" && obj.name !~ party_members}
+		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members} || []
+		disk_pcs = GameObj.loot.select {|obj| obj.noun == "disk" && obj.name !~ party_members} || []
 		#We need nouns for comparison
 		@poach_targets = strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect {|disk|
 			disk.name =~ /(?<name>\w+) disk/
@@ -83,8 +83,8 @@ def poaching?
 		@new_room = false
 	else
 		old_strangers = Set.new @poach_targets
-		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members}
-		disk_pcs = GameObj.loot.select {|obj| obj.noun == "disk" && obj.name !~ party_members}
+		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members} || []
+		disk_pcs = GameObj.loot.select {|obj| obj.noun == "disk" && obj.name !~ party_members} || []
 		current_strangers = Set.new strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect {|disk|
 			disk.name =~ /(?<name>\w+) disk/
 			$~[:name]
