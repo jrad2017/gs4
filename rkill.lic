@@ -585,11 +585,11 @@ if !Vars[@script_name]['profiles'].include? 'default'
   end
 end
 
-if !Vars[@script_name].includes 'core_group' && (['Alyssea', 'Archaeron', 'Predest', 'Ericos'].includes? name)
+if !Vars[@script_name].include? 'core_group' && (['Alyssea', 'Archaeron', 'Predest', 'Ericos'].include? name)
 	Vars[@script_name]['core_group'] = ["Ericos", "Predest", "Alyssea", "Archaeron", "Draccor", "Naina", "Szyxt"]
 end
 
-cmd_string = "#{$lich_char}#{@script_name}"
+@cmd_string = "#{$lich_char}#{@script_name}"
 
 def handle_profile_cmds line
 	#Processes profile commands
@@ -718,7 +718,7 @@ def handle_group_cmds line
 			pcs.add $~[:name].downcase
 			Vars[@script_name]['group'] = pcs.to_a
 		}
-		respond "Added #{$~[:name] to core group}"
+		respond "Added #{$~[:name]} to core group"
 	when /group rm (?<name>\w+)/
 		pc = nil
 		@vars_mutex.synchronize {
@@ -728,6 +728,7 @@ def handle_group_cmds line
 			respond "Could not find #{$~[:name].capitalize} to remove from core group"
 		else
 			respond "Removed #{$~[:name]} from core group"
+		end
 	when /group set (?<names>[\w, ]+)?/
 		pcs = ($~[:name].split(",") || []).map {|pc| pc.strip.downcase}
 		@vars_mutex.synchronize { Vars[@script_name]['group'] = pcs }
