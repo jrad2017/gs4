@@ -52,6 +52,7 @@ end
 	@current_group = get_current_group
 }
 
+@current_room_id = nil
 @new_room = true
 @poaching = true
 
@@ -127,7 +128,7 @@ end
 
 def cmd_gos
   sigils = [Spell[9707], Spell[9708], Spell[9710]]
-	
+
 	if Spell[9715].known?
 		sigils.push Spell[9715]
 	elsif Spell[9705].known?
@@ -697,18 +698,17 @@ group_hook = proc {|line|
 		@group_mutex.synchronize {
 			@current_group.push $~[:name]
 		}
-		nil
 	when /$(?<name>\w+) leaves (your|\w+'s) group.^/
 		@group_mutex.synchronize {
 			@current_group.delete $~[:name]
 		}
-		nil
 	when /$Obvious exits:/
-		@new_room = true
-		line
-	else
-		line
+		if Room.current.id != @current_room_id
+			@new_room = true
+			@current_room_id = Room.current.id
+		end
 	end
+	line
 }
 
 UpstreamHook.add @cmd_string, command_hook
