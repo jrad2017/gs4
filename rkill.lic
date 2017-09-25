@@ -59,8 +59,9 @@ end
 @poach_targets = []
 
 def poaching?
-	#Test if someone in the room is unexpected, to avoid poaching
-	#Get minimal list of names to care about
+	#Test if someone in the room is unexpected, to avoid poaching.
+	#This respects room order, e.g. who was in the room first has hunting rights
+	#If that person(group) leaves, it is no longer considered poaching
 	if @new_room
 		@poach_targets = []
 		pcs = Set.new @core_group
@@ -68,21 +69,25 @@ def poaching?
 			pcs.merge @current_group
 		}
 		party_members = Regexp.new pcs.to_a.join("|")
-		#Also check disk names against party members
+		#Build list of PC's not recognized, and also check disk names against party members
 		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members}
 		disk_pcs = GameObj.loot.select {|obj| obj.noun == "disk" && obj.name !~ party_members}
-		@poach_targets = strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect{|disk|
+		#We need nouns for comparison
+		@poach_targets = strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect {|disk|
 			disk.name =~ /(?<name>\w+) disk/
-			$~[:name]}
+			$~[:name]
+		}
 		@poaching = !@poach_targets.empty?
 		@new_room = false
 	else
 		old_strangers = Set.new @poach_targets
 		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members}
 		disk_pcs = GameObj.loot.select {|obj| obj.noun == "disk" && obj.name !~ party_members}
-		current_strangers = Set.new strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect{|disk|
+		current_strangers = Set.new strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect {|disk|
 			disk.name =~ /(?<name>\w+) disk/
-			$~[:name]}
+			$~[:name]
+		}
+		#Use set intersection as a fast way to tell if people left
 		if (current_strangers & old_strangers).empty?
 			@poaching = false
 		end
