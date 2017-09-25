@@ -1333,13 +1333,13 @@ all_script_vars_to_check.each{|i|
 }
 
 if warrior_wait
-	if Char.prof == 'Warrior'
+	if Char.prof == 'Warrior' || Char.prof == "Bard"
 		fput "stow right" if checkright
 		fput "stow left" if checkleft
 		echo "You are waiting for someone to hand you something to assess."
 		wait_mode.call
 	else
-		echo "This feature only works for warriors."
+		echo "This feature only works for warriors or bards."
 		exit
 	end
 end
