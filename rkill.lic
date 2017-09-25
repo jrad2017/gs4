@@ -711,12 +711,12 @@ command_hook = proc { |line|
 #Procedure for processing people joining/leaving the group organically
 group_hook = proc {|line|
 	case line
-	when /$(?<name>\w+) joins (your|\w+'s) group.^/
+	when /^(?<name>\w+) joins (your|\w+'s) group.$/
 		#Add person to group
 		@group_mutex.synchronize {
 			@current_group.push $~[:name]
 		}
-	when /$(?<name>\w+) leaves (your|\w+'s) group.^/
+	when /^(?<name>\w+) leaves (your|\w+'s) group.$/
 		@group_mutex.synchronize {
 			@current_group.delete $~[:name]
 		}
