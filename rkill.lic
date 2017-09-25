@@ -720,12 +720,12 @@ group_hook = proc {|line|
 		@group_mutex.synchronize {
 			@current_group.delete $~[:name]
 		}
-	when /$The Symbol of Need begins to burn in your mind and an image appears before you of|$You peer (?:\w+) and see/
+	when /^The Symbol of Need begins to burn in your mind and an image appears before you of|^You peer (?:\w+) and see/
 		@is_peer = true
-	when /$Obvious exits:/
+	when /Obvious (exits|paths):/
 		if @is_peer
 			@is_peer = false
-		elsif Room.current.id != @current_room_id
+		elsif @current_room_id && Room.current.id != @current_room_id
 			@new_room = true
 			@current_room_id = Room.current.id
 		end
