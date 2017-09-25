@@ -56,12 +56,14 @@ end
 @new_room = true
 @poaching = true
 @is_peer = false
-@poach_targets = []
 
 def poaching?
 	#Test if someone in the room is unexpected, to avoid poaching.
 	#This respects room order, e.g. who was in the room first has hunting rights
 	#If that person(group) leaves, it is no longer considered poaching
+	if !@poach_targets
+		@poach_targets = []
+	end
 	if @new_room
 		@poach_targets = []
 		pcs = Set.new @core_group
