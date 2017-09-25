@@ -68,7 +68,7 @@ def poaching?
 		@group_mutex.synchronize {
 			pcs.merge @current_group
 		}
-		party_members = Regexp.new pcs.to_a.join("|")
+		party_members = Regexp.new pcs.to_a.join("|"), Regexp::IGNORECASE
 		#Build list of PC's not recognized, and also check disk names against party members
 		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members}
 		disk_pcs = GameObj.loot.select {|obj| obj.noun == "disk" && obj.name !~ party_members}
