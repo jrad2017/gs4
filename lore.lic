@@ -191,65 +191,62 @@ class Lore
 			display_data
 		end
 		whisper_target = nil
-		Script.current.vars.each {|var|
-			case var
-			when /0|all/
-				if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-				$Temppass = 4
-				LoreSilent.call
-			when /1|value/
-				if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-				$Temppass = 0
-				LoreSilent.call
-			when /2|purpose/
-				if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-				$Temppass = 1
-				LoreSilent.call
-			when /3|enhance/
-				if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-				$Temppass = 2
-				LoreSilent.call
-			when /4|ability/
-				if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-				$Temppass = 3
-				LoreSilent.call
-			when /whisper\s*=\s*(?<name>[\w']+)/
-				whisper_target = $~[:name]
-			when /silence|silent\s*=\s*(?<on>on|true)?(?<off>off|false)?/
-				if $~[:on]
-					UserVars.change("Lore_Silent", true)
-					UserVars.save
-					respond
-					respond "Silent Mode is now active!"
-					respond
-				elsif $~[:off]
-					UserVars.change("Lore_Silent", false)
-					UserVars.save
-					respond
-					respond "Silent Mode is now deactive!"
-					respond
-				end
-			when /virgins/
+		args = Script.current.vars[0]
+		case args
+		when /0|all|^$/
+			if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+			$Temppass = 4
+			LoreSilent.call
+		when /1|value/
+			if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+			$Temppass = 0
+			LoreSilent.call
+		when /2|purpose/
+			if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+			$Temppass = 1
+			LoreSilent.call
+		when /3|enhance/
+			if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+			$Temppass = 2
+			LoreSilent.call
+		when /4|ability/
+			if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+			$Temppass = 3
+			LoreSilent.call
+		end
+		if args =~ /whisper\s*=\s*(?<name>[\w']+)/
+			whisper_target = $~[:name]
+		end
+		if args =~ /silence|silent\s*=\s*(?<on>on|true)?(?<off>off|false)?/
+			if $~[:on]
+				UserVars.change("Lore_Silent", true)
+				UserVars.save
 				respond
-				respond "You have discovered the hidden command!"
+				respond "Silent Mode is now active!"
 				respond
-				fput "sing A dragon has come to our village today.;We've asked him to leave, but he won't go away.;Now he's talked to our king and they worked out a deal.;No homes will he burn and no crops will he steal."
-				pause 7
-				fput "sing Now there is but one catch, we dislike it a bunch.;Twice a year he invites him a virgin to lunch.;Well, we've no other choice, so the deal we'll respect.;But we can't help but wonder and pause to reflect."
-				pause 7
-				fput "sing Do virgins taste better than those who are not?;Are they salty, or sweeter, more juicy or what?;Do you savor them slowly? Gulp them down on the spot?;Do virgins taste better than those who are not?"
-				pause 7
-				fput "sing Now we'd like to be shed you, and many have tried.;But no one can get through your thick scaly hide.;We hope that some day, some brave knight will come by.;'Cause we can't wait around 'til you're too fat to fly."
-				pause 7
-				fput "sing Now you have such good taste in your women for sure,;They always are pretty, they always are pure.;But your notion of dining, it makes us all flinch,;For your favorite entree is barbecued wench."
-				pause 7
-				fput "sing Now we've found a solution, it works out so neat,;If you insist on nothing but virgins to eat.;No more will our number ever grow small,;We'll simply make sure there's no virgins at all!"
-			else
-				if GameObj.right_hand.name == "Empty" then print_help; exit end
-				$Temppass = 4
-				LoreSilent.call
+			elsif $~[:off]
+				UserVars.change("Lore_Silent", false)
+				UserVars.save
+				respond
+				respond "Silent Mode is now deactive!"
+				respond
 			end
-		}
+		if args =~ /virgins/
+			respond
+			respond "You have discovered the hidden command!"
+			respond
+			fput "sing A dragon has come to our village today.;We've asked him to leave, but he won't go away.;Now he's talked to our king and they worked out a deal.;No homes will he burn and no crops will he steal."
+			pause 7
+			fput "sing Now there is but one catch, we dislike it a bunch.;Twice a year he invites him a virgin to lunch.;Well, we've no other choice, so the deal we'll respect.;But we can't help but wonder and pause to reflect."
+			pause 7
+			fput "sing Do virgins taste better than those who are not?;Are they salty, or sweeter, more juicy or what?;Do you savor them slowly? Gulp them down on the spot?;Do virgins taste better than those who are not?"
+			pause 7
+			fput "sing Now we'd like to be shed you, and many have tried.;But no one can get through your thick scaly hide.;We hope that some day, some brave knight will come by.;'Cause we can't wait around 'til you're too fat to fly."
+			pause 7
+			fput "sing Now you have such good taste in your women for sure,;They always are pretty, they always are pure.;But your notion of dining, it makes us all flinch,;For your favorite entree is barbecued wench."
+			pause 7
+			fput "sing Now we've found a solution, it works out so neat,;If you insist on nothing but virgins to eat.;No more will our number ever grow small,;We'll simply make sure there's no virgins at all!"
+		end
 
 		if whisper_target
 			data = "#{@objectname}: "
