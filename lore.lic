@@ -182,10 +182,13 @@ class Lore
 
 	def command
 		if Stats.prof != "Bard"
-			respond
-			respond
-			respond "Displaying previously sung data!"
-			display_data
+			if ($ResultValue || $ResultPurpose || $ResultAbility || $ResultEnhance)
+				respond
+				respond
+				respond "Displaying previously sung data!"
+				display_data
+			end
+			exit
 		end
 		whisper_target = nil
 		args = Script.current.vars[0]
