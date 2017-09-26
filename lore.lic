@@ -273,7 +273,7 @@ class Lore
 		}
 
 		if whisper_target
-			fput "whisper ooc #{whisper_target} About #{objectname}:"
+			fput "whisper ooc #{whisper_target} About your #{objectname}:"
 			if $ResultValue
 				clamped_whisper.call whisper_target, $ResultValue
 			end
@@ -331,7 +331,7 @@ class Lore
 		respond
 		unless $ResultValue.nil? then respond "Value: #{$ResultValue}" end
 		unless $ResultPurpose.nil? then respond "Purpose: #{$ResultPurpose}" end
-		unless $ResultEnhance.nil? then respond "Enhansive: #{$ResultEnhance}" end
+		unless $ResultEnhance.nil? then respond "Enhancive: #{$ResultEnhance}" end
 		unless $ResultAbility.nil? then respond "Ability: #{$ResultAbility}" end
 		respond
 		respond
