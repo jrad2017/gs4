@@ -127,8 +127,9 @@ class Lore
 		$ResultEnhance = nil
 		$ResultAbility = nil
 		$Silent = UserVars.Lore_Silent
-		$Enable_Logs = UserVars.Lore_Logs
-		$Enable_Logs = true
+		if UserVars.list.include? "Lore_Logs"
+			$Enable_Logs = UserVars.Lore_Logs
+		end
 		@objectname = GameObj.right_hand.name
 		@objectid = GameObj.right_hand.id
 		$object = GameObj.right_hand.noun
