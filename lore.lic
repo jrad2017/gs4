@@ -94,12 +94,12 @@ def SingLore(var)
 			break
 		else
 			if reading_results
-				results.push line
+				results.push line.gsub(/<.*>([\w' ]+)<\/.*>/, '\1')
 			end
 		end
 	end
 	Script.current.want_downstream_xml = false
-	results.join("\n")
+	results.join(" ")
 end
 
 class Lore
