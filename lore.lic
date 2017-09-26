@@ -127,13 +127,23 @@ class Lore
 
 	LoreSilent = proc{
 		action = proc { |server_string|
-			if $Silent == true or server_string.include?("now speaking")
-				nil
+			case server_string
+			when /^You are now speaking Guildspeak.$/
+				@squelch = true && @Silent
+			when /^You are now speaking Common.$/
+				@squelch = false
 			else
-				server_string
+				if @squelch
+					nil
+				else
+					server_string
+				end
 			end
 		}
-		if $Silent == true then DownstreamHook.add("Lore_LoreSilent", action) end
+		if $Silent == true
+			DownstreamHook.add("Lore_LoreSilent", action)
+			before_dying {DownstreamHook.remove "Lore_LoreSilent"}
+		end
 		fput "speak bard"
 		case $Temppass
 		when 0
@@ -151,7 +161,6 @@ class Lore
 			$ResultValue = SingLore(0)
 		end
 		fput "speak common"
-		if $Silent == true then DownstreamHook.remove("Lore_LoreSilent") end
 	}
 
 	def print_help
