@@ -120,9 +120,6 @@ class Lore
 		@objectid = GameObj.right_hand.id
 		$object = GameObj.right_hand.noun
 		load_data
-		if $Silent == true
-			before_dying {DownstreamHook.remove("Lore_LoreSilent")}
-		end
 		unless $SAFE == 0
 			$Enable_Logs = false
 		end
