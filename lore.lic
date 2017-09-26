@@ -157,6 +157,32 @@ class Lore
 		if $Silent == true then DownstreamHook.remove("Lore_LoreSilent") end
 	}
 
+	def print_help
+		respond
+		respond "Place the object in your right hand you want to loresing!"
+		respond
+		respond "      COMMANDS                               DESCRIPTION"
+		respond
+		respond ";lore all or ;lore 0                   Loresing EVERYTHING (All verses in order)"
+		respond ";lore value or ;lore 1                 Loresing Value Only (verse 1)"
+		respond ";lore purpose or ;lore 2               Loresing Purpose Only (verse 2)"
+		respond ";lore enhance or ;lore 3               Loresing enhance Only (verse 3)"
+		respond ";lore ability or ;lore 4               Loresing Ability Only (verse 4)"
+		respond
+		respond ";lore                                  If logging is enabled and there is a log, will pull log or else it will sing all 4 types!"
+		respond
+		respond "                            OPTIONS"
+		respond
+		respond ";lore log=[on/off/true/false]          Enable/Disable logging (off by default)"
+		respond ";lore silence=[on/off/true/false]      Hide/See singing (on by default)"
+		respond ";lore silent=[on/off/true/false]       Hide/See singing (on by default)"
+		respond ";lore whisper=[PERSON]                 Whispers details to person of object already sung to in right hand (Requires logging)."
+		respond
+		respond
+		respond 'Please note, there is a script called "AUTOLORE" that will automatically run this script for mass loresinging'
+		respond
+	end
+
 	def command
 		if Stats.prof != "Bard"
 			respond
@@ -168,27 +194,24 @@ class Lore
 		Script.current.vars.each {|var|
 			case var
 			when /0|all/
-				if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+				if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
 				$Temppass = 4
 				LoreSilent.call
 			when /1|value/
-				if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+				if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
 				$Temppass = 0
 				LoreSilent.call
 			when /2|purpose/
-				if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+				if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
 				$Temppass = 1
 				LoreSilent.call
 			when /3|enhance/
-				if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+				if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
 				$Temppass = 2
 				LoreSilent.call
 			when /4|ability/
-				if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+				if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
 				$Temppass = 3
-				LoreSilent.call
-			when /all|/
-				$Temppass = 4
 				LoreSilent.call
 			when /whisper\s*=\s*(?<name>[\w']+)/
 				whisper_target = $~[:name]
@@ -222,29 +245,9 @@ class Lore
 				pause 7
 				fput "sing Now we've found a solution, it works out so neat,;If you insist on nothing but virgins to eat.;No more will our number ever grow small,;We'll simply make sure there's no virgins at all!"
 			else
-				respond
-				respond "Place the object in your right hand you want to loresing!"
-				respond
-				respond "      COMMANDS                               DESCRIPTION"
-				respond
-				respond ";lore all or ;lore 0                   Loresing EVERYTHING (All verses in order)"
-				respond ";lore value or ;lore 1                 Loresing Value Only (verse 1)"
-				respond ";lore purpose or ;lore 2               Loresing Purpose Only (verse 2)"
-				respond ";lore enhance or ;lore 3               Loresing enhance Only (verse 3)"
-				respond ";lore ability or ;lore 4               Loresing Ability Only (verse 4)"
-				respond
-				respond ";lore                                  If logging is enabled and there is a log, will pull log or else it will sing all 4 types!"
-				respond
-				respond "                            OPTIONS"
-				respond
-				respond ";lore log [on/off/true/false]          Enable/Disable logging (off by default)"
-				respond ";lore silence [on/off/true/false]      Hide/See singing (on by default)"
-				respond ";lore silent [on/off/true/false]       Hide/See singing (on by default)"
-				respond ";lore whisper [PERSON]                 Whispers details to person of object already sung to in right hand (Requires logging)."
-				respond
-				respond
-				respond 'Please note, there is a script called "AUTOLORE" that will automatically run this script for mass loresinging'
-				respond
+				if GameObj.right_hand.name == "Empty" then print_help; exit end
+				$Temppass = 4
+				LoreSilent.call
 			end
 		}
 
