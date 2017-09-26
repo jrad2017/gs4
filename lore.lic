@@ -231,6 +231,7 @@ class Lore
 				respond "Silent Mode is now deactive!"
 				respond
 			end
+		end
 		if args =~ /virgins/
 			respond
 			respond "You have discovered the hidden command!"
