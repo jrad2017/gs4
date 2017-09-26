@@ -251,19 +251,37 @@ class Lore
 			fput "sing Now we've found a solution, it works out so neat,;If you insist on nothing but virgins to eat.;No more will our number ever grow small,;We'll simply make sure there's no virgins at all!"
 		end
 
+		clamped_whisper = proc {|tgt, line|
+			max_length = 512
+			if line.length < max_length
+				fput "whisper ooc #{tgt} #{line}"
+			else
+				sentences = line.scan(/\.( |^)/)
+				new_line = ''
+				sentences.each {|sentence|
+					if new_line.length + sentence.length < max_length
+						new_line += sentence
+					else
+						fput "whisper ooc #{tgt} #{new_line}"
+						new_line = sentence
+					end
+				}
+			end
+		}
+
 		if whisper_target
 			fput "whisper ooc #{whisper_target} About #{objectname}:"
 			if $ResultValue
-				fput "whisper ooc #{whisper_target} #{$ResultValue}"
+				clamped_whisper.call whisper_target, $ResultValue
 			end
 			if $ResultPurpose
-				fput "whisper ooc #{whisper_target} #{$ResultPurpose}"
+				clamped_whisper.call whisper_target, $ResultPurpose
 			end
 			if $ResultEnhance
-				fput "whisper ooc #{whisper_target} #{$ResultEnhance}"
+				clamped_whisper.call whisper_target, $ResultEnhance
 			end
 			if $ResultAbility
-				fput "whisper ooc #{whisper_target} #{$ResultAbility}"
+				clamped_whisper.call whisper_target, $ResultAbility
 			end
 		end
 
