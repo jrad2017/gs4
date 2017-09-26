@@ -256,13 +256,16 @@ class Lore
 			if line.length < max_length
 				fput "whisper ooc #{tgt} #{line}"
 			else
-				sentences = line.scan(/\.( |^)/)
+				sentences = line.split /\.( |^)/
 				new_line = ''
-				sentences.each {|sentence|
-					if new_line.length + sentence.length < max_length
-						new_line = "#{new_line} #{sentence}"
+			  sentences.each {|sentence|
+					sentence.strip!
+					if !sentence.empty? && new_line.length + sentence.length < max_length
+						new_line = "#{new_line}#{sentence.strip}. "
 					else
-						fput "whisper ooc #{tgt} #{new_line}"
+						if !new_line.empty?
+							fput "whisper ooc #{tgt} #{new_line}"
+						end
 						new_line = sentence
 					end
 				}
