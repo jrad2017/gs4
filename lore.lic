@@ -91,8 +91,8 @@ def SingLore(var)
 		when /<prompt|you previously learned|reached the end|without sufficient power|You open your mouth, but find yourself unable to sing|glean more/
 			break
 		else
-			if reading_results
-				result_line = line.gsub(/<.*>([\w' ]+)<\/.*>/, '\1').strip
+			result_line = line.gsub(/<.*>([\w' ]+)<\/.*>/, '\1').strip
+			if reading_results && !result_line.empty?
 				results.push result_line
 			end
 		end
