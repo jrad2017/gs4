@@ -163,129 +163,100 @@ class Lore
 			respond
 			respond "Displaying previously sung data!"
 			display_data
-			exit
-		elsif Script.current.vars[1].nil?
-			if $Enable_Logs == true and File.exists?("#{$lich_dir}logs/#{XMLData.game}-Lore/#{@objectname}-#{@objectid}.txt")
-				respond
-				respond
-				respond "Displaying what we know sung in the past!"
-				display_data
-				exit
-			else
+		end
+		whisper_target = nil
+		Script.current.vars.each {|var|
+			case var
+			when /0|all/
+				if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
 				$Temppass = 4
 				LoreSilent.call
-			end
-		elsif "all".include?(variable[1].to_s) or variable[1] == '0'
-			if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-			$Temppass = 4
-			LoreSilent.call
-		elsif "value".include?(Script.current.vars[1].to_s) or Script.current.vars[1] == '1'
-			if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-			$Temppass = 0
-			LoreSilent.call
-		elsif "purpose".include?(Script.current.vars[1].to_s) or Script.current.vars[1] == '2'
-			if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-			$Temppass = 1
-			LoreSilent.call
-		elsif "enhance".include?(Script.current.vars[1].to_s) or Script.current.vars[1] == '3'
-			if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-			$Temppass = 2
-			LoreSilent.call
-		elsif "ability".include?(Script.current.vars[1].to_s) or Script.current.vars[1] == '4'
-			if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-			$Temppass = 3
-			LoreSilent.call
-		elsif "whisper".include?(Script.current.vars[1].to_s)
-			unless Script.current.vars[2].nil?
-#				unless $ResultValue.nil? then fput "whisper #{Script.current.vars[2]} #{$ResultValue}" end
-#				unless $ResultPurpose.nil? then fput "whisper #{Script.current.vars[2]} #{$ResultPurpose}" end
-#				unless $ResultEnhance.nil? then fput "whisper #{Script.current.vars[2]} #{$ResultEnhance}" end
-#				unless $ResultAbility.nil? then fput "whisper #{Script.current.vars[2]} #{$ResultAbility}" end
-				data = "#{@objectname}: "
-				unless $ResultValue.nil? then data = data + $ResultValue + " " end
-				unless $ResultPurpose.nil? then data = data + $ResultPurpose + " " end
-				unless $ResultEnhance.nil? then data = data + $ResultEnhance + " " end
-				unless $ResultAbility.nil? then data = data + $ResultAbility + " " end
-				fput "whisper #{Script.current.vars[2]} #{data}"
-			end
-			exit
-		elsif "silence".include?(Script.current.vars[1].to_s) or "silent".include?(Script.current.vars[1].to_s)
-			if Script.current.vars[2].to_s == 'on' or Script.current.vars[2].to_s == 'true'
-				UserVars.change("Lore_Silent", true)
-				UserVars.save
-				respond
-				respond "Silent Mode is now active!"
-				respond
-			elsif Script.current.vars[2].to_s == 'off' or Script.current.vars[2].to_s == 'false'
-				UserVars.change("Lore_Silent", false)
-				UserVars.save
-				respond
-				respond "Silent Mode is now deactive!"
-				respond
-			end
-			exit
-		elsif "logs".include?(Script.current.vars[1].to_s)
-			if Script.current.vars[2].to_s == 'on' or Script.current.vars[2].to_s == 'true'
-				unless $SAFE == 0
-					echo "This script must be trusted to be allowed to write to log files."
-					echo "You can trust it with the following command: #{$lich_char}trust #{script.name}"
-					exit
+			when /1|value/
+				if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+				$Temppass = 0
+				LoreSilent.call
+			when /2|purpose/
+				if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+				$Temppass = 1
+				LoreSilent.call
+			when /3|enhance/
+				if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+				$Temppass = 2
+				LoreSilent.call
+			when /4|ability/
+				if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
+				$Temppass = 3
+				LoreSilent.call
+			when /all|/
+				$Temppass = 4
+				LoreSilent.call
+			when /whisper\s*=\s*(?<name>[\w']+)/
+				whisper_target = $~[:name]
+			when /silence|silent\s*=\s*(?<on>on|true)?(?<off>off|false)?/
+				if $~[:on]
+					UserVars.change("Lore_Silent", true)
+					UserVars.save
+					respond
+					respond "Silent Mode is now active!"
+					respond
+				elsif $~[:off]
+					UserVars.change("Lore_Silent", false)
+					UserVars.save
+					respond
+					respond "Silent Mode is now deactive!"
+					respond
 				end
-				UserVars.change("Lore_Logs", true)
-				UserVars.save
+			when /virgins/
 				respond
-				respond "Logs are now active!"
+				respond "You have discovered the hidden command!"
 				respond
-			elsif Script.current.vars[2].to_s == 'off' or Script.current.vars[2].to_s == 'false'
-				UserVars.change("Lore_Logs", false)
-				UserVars.save
+				fput "sing A dragon has come to our village today.;We've asked him to leave, but he won't go away.;Now he's talked to our king and they worked out a deal.;No homes will he burn and no crops will he steal."
+				pause 7
+				fput "sing Now there is but one catch, we dislike it a bunch.;Twice a year he invites him a virgin to lunch.;Well, we've no other choice, so the deal we'll respect.;But we can't help but wonder and pause to reflect."
+				pause 7
+				fput "sing Do virgins taste better than those who are not?;Are they salty, or sweeter, more juicy or what?;Do you savor them slowly? Gulp them down on the spot?;Do virgins taste better than those who are not?"
+				pause 7
+				fput "sing Now we'd like to be shed you, and many have tried.;But no one can get through your thick scaly hide.;We hope that some day, some brave knight will come by.;'Cause we can't wait around 'til you're too fat to fly."
+				pause 7
+				fput "sing Now you have such good taste in your women for sure,;They always are pretty, they always are pure.;But your notion of dining, it makes us all flinch,;For your favorite entree is barbecued wench."
+				pause 7
+				fput "sing Now we've found a solution, it works out so neat,;If you insist on nothing but virgins to eat.;No more will our number ever grow small,;We'll simply make sure there's no virgins at all!"
+			else
 				respond
-				respond "Logs are now deactivated!"
+				respond "Place the object in your right hand you want to loresing!"
+				respond
+				respond "      COMMANDS                               DESCRIPTION"
+				respond
+				respond ";lore all or ;lore 0                   Loresing EVERYTHING (All verses in order)"
+				respond ";lore value or ;lore 1                 Loresing Value Only (verse 1)"
+				respond ";lore purpose or ;lore 2               Loresing Purpose Only (verse 2)"
+				respond ";lore enhance or ;lore 3               Loresing enhance Only (verse 3)"
+				respond ";lore ability or ;lore 4               Loresing Ability Only (verse 4)"
+				respond
+				respond ";lore                                  If logging is enabled and there is a log, will pull log or else it will sing all 4 types!"
+				respond
+				respond "                            OPTIONS"
+				respond
+				respond ";lore log [on/off/true/false]          Enable/Disable logging (off by default)"
+				respond ";lore silence [on/off/true/false]      Hide/See singing (on by default)"
+				respond ";lore silent [on/off/true/false]       Hide/See singing (on by default)"
+				respond ";lore whisper [PERSON]                 Whispers details to person of object already sung to in right hand (Requires logging)."
+				respond
+				respond
+				respond 'Please note, there is a script called "AUTOLORE" that will automatically run this script for mass loresinging'
 				respond
 			end
-			exit
-		elsif "virgins".include?(Script.current.vars[1])
-			respond
-			respond "You have discovered the hidden command!"
-			respond
-			fput "sing A dragon has come to our village today.;We've asked him to leave, but he won't go away.;Now he's talked to our king and they worked out a deal.;No homes will he burn and no crops will he steal."
-			pause 7
-			fput "sing Now there is but one catch, we dislike it a bunch.;Twice a year he invites him a virgin to lunch.;Well, we've no other choice, so the deal we'll respect.;But we can't help but wonder and pause to reflect."
-			pause 7
-			fput "sing Do virgins taste better than those who are not?;Are they salty, or sweeter, more juicy or what?;Do you savor them slowly? Gulp them down on the spot?;Do virgins taste better than those who are not?"
-			pause 7
-			fput "sing Now we'd like to be shed you, and many have tried.;But no one can get through your thick scaly hide.;We hope that some day, some brave knight will come by.;'Cause we can't wait around 'til you're too fat to fly."
-			pause 7
-			fput "sing Now you have such good taste in your women for sure,;They always are pretty, they always are pure.;But your notion of dining, it makes us all flinch,;For your favorite entree is barbecued wench."
-			pause 7
-			fput "sing Now we've found a solution, it works out so neat,;If you insist on nothing but virgins to eat.;No more will our number ever grow small,;We'll simply make sure there's no virgins at all!"
-			exit
-		else
-			respond
-			respond "Place the object in your right hand you want to loresing!"
-			respond
-			respond "      COMMANDS                               DESCRIPTION"
-			respond
-			respond ";lore all or ;lore 0                   Loresing EVERYTHING (All verses in order)"
-			respond ";lore value or ;lore 1                 Loresing Value Only (verse 1)"
-			respond ";lore purpose or ;lore 2               Loresing Purpose Only (verse 2)"
-			respond ";lore enhance or ;lore 3               Loresing enhance Only (verse 3)"
-			respond ";lore ability or ;lore 4               Loresing Ability Only (verse 4)"
-			respond
-			respond ";lore                                  If logging is enabled and there is a log, will pull log or else it will sing all 4 types!"
-			respond
-			respond "                            OPTIONS"
-			respond
-			respond ";lore log [on/off/true/false]          Enable/Disable logging (off by default)"
-			respond ";lore silence [on/off/true/false]      Hide/See singing (on by default)"
-			respond ";lore silent [on/off/true/false]       Hide/See singing (on by default)"
-			respond ";lore whisper [PERSON]                 Whispers details to person of object already sung to in right hand (Requires logging)."
-			respond
-			respond
-			respond 'Please note, there is a script called "AUTOLORE" that will automatically run this script for mass loresinging'
-			respond
-			return
+		}
+
+		if whisper_target
+			data = "#{@objectname}: "
+			unless $ResultValue.nil? then data = data + $ResultValue + " " end
+			unless $ResultPurpose.nil? then data = data + $ResultPurpose + " " end
+			unless $ResultEnhance.nil? then data = data + $ResultEnhance + " " end
+			unless $ResultAbility.nil? then data = data + $ResultAbility + " " end
+			fput "whisper #{whisper_target} #{data}"
 		end
+
 		if $Enable_Logs == true then log end
 		display_data
 	end
