@@ -68,8 +68,6 @@ First version made which as a basic loresinging script
 
 =end
 
-temppass = 0
-
 object = nil
 
 Silent = false
@@ -125,7 +123,7 @@ class Lore
 		end
 	end
 
-	LoreSilent = proc{
+	LoreSilent = proc{ |sing_level|
 		action = proc { |server_string|
 			case server_string
 			when /^You are now speaking Guildspeak.$/
@@ -145,7 +143,7 @@ class Lore
 			before_dying {DownstreamHook.remove "Lore_LoreSilent"}
 		end
 		fput "speak bard"
-		case $Temppass
+		case sing_level
 		when 0
 			$ResultValue = SingLore(0)
 		when 1
@@ -204,24 +202,19 @@ class Lore
 		case args
 		when /0|all|^$/
 			if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-			$Temppass = 4
-			LoreSilent.call
+			LoreSilent.call 4
 		when /1|value/
 			if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-			$Temppass = 0
-			LoreSilent.call
+			LoreSilent.call 0
 		when /2|purpose/
 			if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-			$Temppass = 1
-			LoreSilent.call
+			LoreSilent.call 1
 		when /3|enhance/
 			if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-			$Temppass = 2
-			LoreSilent.call
+			LoreSilent.call 2
 		when /4|ability/
 			if GameObj.right_hand.name == "Empty" then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
-			$Temppass = 3
-			LoreSilent.call
+			LoreSilent.call 3
 		end
 		if args =~ /whisper\s*=\s*(?<name>[\w']+)/
 			whisper_target = $~[:name]
