@@ -252,12 +252,19 @@ class Lore
 		end
 
 		if whisper_target
-			data = "#{@objectname}: "
-			unless $ResultValue.nil? then data = data + $ResultValue + " " end
-			unless $ResultPurpose.nil? then data = data + $ResultPurpose + " " end
-			unless $ResultEnhance.nil? then data = data + $ResultEnhance + " " end
-			unless $ResultAbility.nil? then data = data + $ResultAbility + " " end
-			fput "whisper #{whisper_target} #{data}"
+			fput "whisper ooc #{whisper_target} About #{objectname}:"
+			if $ResultValue
+				fput "whisper ooc #{whisper_target} #{$ResultValue}"
+			end
+			if $ResultPurpose
+				fput "whisper ooc #{whisper_target} #{$ResultPurpose}"
+			end
+			if $ResultEnhance
+				fput "whisper ooc #{whisper_target} #{$ResultEnhance}"
+			end
+			if $ResultAbility
+				fput "whisper ooc #{whisper_target} #{$ResultAbility}"
+			end
 		end
 
 		if $Enable_Logs == true then log end
