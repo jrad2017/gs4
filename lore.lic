@@ -90,7 +90,7 @@ def SingLore(var)
 		case line
 		when /you learn something about it...$|in your hand...$/
 			reading_results = true
-		case /<prompt|you previously learned|reached the end|without sufficient power|You open your mouth, but find yourself unable to sing|glean more/
+		when /<prompt|you previously learned|reached the end|without sufficient power|You open your mouth, but find yourself unable to sing|glean more/
 			break
 		else
 			if reading_results
