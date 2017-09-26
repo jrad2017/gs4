@@ -82,38 +82,24 @@ ResultValue = nil
 
 def SingLore(var)
 	loretype = [", please tell me and tell me true,;What might be your own value?", " I am listening and it is all coming clear,;But your purpose is what I would most like to hear.", " it will be helpful for me to know,;What enhance within will you now show?", ", from my ears and eyes you have nothing to hide,;What special ability do you hold inside?"]
-	while true
-		dothistimeout "loresing #{$object}" + loretype[var].to_s, 15, /You sing/
-		while line = get
-			if line =~ /you learn something/ or line =~ /in your hand/
-				line = get
-				if line2 = Script.current.gets?
-					if line2 =~ /You sense/
-						respond line + " " + line2
-						return line + " " + line2
-					else
-						respond line
-						return line
-					end
-				else
-					return line
-				end
-			elsif line =~ /you previously learned/
-				return nil
-			elsif line =~ /reached the end/
-				return nil
-			elsif line =~ /without sufficient power/ or line =~ /You open your mouth, but find yourself unable to sing/
-				respond
-				respond
-				respond "You are out of mana to find out anything else!"
-				respond
-				respond
-				exit
-			elsif line =~ /glean more/
-				break
+	script.want_downstream_xml = true
+	results = []
+	reading_results = false
+	dothistimeout "loresing #{$object}#{loretype[var]}", 15, /^Roundtime:/
+	while line = get
+		case line
+		when /you learn something about it...$|in your hand...$/
+			reading_results = true
+		case /<prompt|you previously learned|reached the end|without sufficient power|You open your mouth, but find yourself unable to sing|glean more/
+			break
+		else
+			if reading_results
+				results.push line
 			end
 		end
 	end
+	script.want_downstream_xml = false
+	results.join("\n")
 end
 
 class Lore
