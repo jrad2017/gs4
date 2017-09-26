@@ -3,19 +3,22 @@
 Script: 		Lore
 Author: 		WilliamW1979 (WilliamW1979@netscape.net)
 Game:			Gemstone
-Date: 			August 21, 2017
-Version: 		2.3
+Date: 			August 25, 2017
+Version: 		2.4
 Description: 		LoreSing to an object in your right hand, gives results at the end!
 Commands: 		;lore help (usage and options)
 What script does:	It has automated loresinging, even a whisper feature to give data to people, logging feature so you can get data later from other characters, and a silent mode so you don't see your own singing.
 
 Update history
 
+2.4
+Bug fixes
+
 2.3
 fput was locking up script, fixed problem using dothistimeout instead
 
 2.2
-Fixed some minor issues.	
+Fixed some minor issues.
 
 2.1
 Change the right hand to detect only if you are singing to an object.
@@ -48,9 +51,9 @@ Added a treat!
 updated silent loresinging so others hear that you are speaking bard and not common.
 
 1.4
-Added more features to the logging ability and changed made a few detects for trust so no errors should come up	
+Added more features to the logging ability and changed made a few detects for trust so no errors should come up
 
-1.3 
+1.3
 Added LOG command to enable and disable logging
 Removed SEEALL command, now Silence / Silent will take a second variale of on or off.
 
@@ -68,6 +71,7 @@ First version made which as a basic loresinging script
 temppass = 0
 
 object = nil
+
 Silent = false
 Enable_Logs = true
 
@@ -118,6 +122,10 @@ class Lore
 
 	def initialize()
 		silence_me
+		$ResultValue = nil
+		$ResultPurpose = nil
+		$ResultEnhance = nil
+		$ResultAbility = nil
 		$Silent = UserVars.Lore_Silent
 		$Enable_Logs = UserVars.Lore_Logs
 		$Enable_Logs = true
@@ -184,27 +192,22 @@ class Lore
 			if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
 			$Temppass = 4
 			LoreSilent.call
-#			if $Silent then LoreSilent.call else $ResultAbility = SingLore(3); $ResultEnhance = SingLore(2); $ResultPurpose = SingLore(1); $ResultValue = SingLore(0) end
 		elsif "value".include?(Script.current.vars[1].to_s) or Script.current.vars[1] == '1'
 			if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
 			$Temppass = 0
 			LoreSilent.call
-#			if $Silent then LoreSilent.call else $ResultValue = SingLore(0) end
 		elsif "purpose".include?(Script.current.vars[1].to_s) or Script.current.vars[1] == '2'
 			if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
 			$Temppass = 1
 			LoreSilent.call
-#			if $Silent then LoreSilent.call else $ResultPurpose = SingLore(1) end
 		elsif "enhance".include?(Script.current.vars[1].to_s) or Script.current.vars[1] == '3'
 			if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
 			$Temppass = 2
 			LoreSilent.call
-#			if $Silent then LoreSilent.call else $ResultEnhance = SingLore(2) end
 		elsif "ability".include?(Script.current.vars[1].to_s) or Script.current.vars[1] == '4'
 			if GameObj.right_hand.name == "Empty" and Script.current.vars[1] then respond; respond; respond "Can't loresing to an empty hand silly!"; respond; respond; exit end
 			$Temppass = 3
 			LoreSilent.call
-#			if $Silent then LoreSilent.call else $ResultAbility = SingLore(3); end
 		elsif "whisper".include?(Script.current.vars[1].to_s)
 			unless Script.current.vars[2].nil?
 #				unless $ResultValue.nil? then fput "whisper #{Script.current.vars[2]} #{$ResultValue}" end
@@ -305,7 +308,7 @@ class Lore
 		directory = basedir + "#{XMLData.game}-Lore/"
 		Dir.mkdir(basedir) unless File.exists?(basedir)
 		Dir.mkdir(directory) unless File.exists?(directory)
-		
+
 		if File.exists?("#{$lich_dir}logs/#{XMLData.game}-Lore/#{@objectname}-#{@objectid}.txt")
 			my_file = File.open("#{$lich_dir}logs/#{XMLData.game}-Lore/#{@objectname}-#{@objectid}.txt", "w+")
 		else
@@ -333,7 +336,7 @@ class Lore
 		respond
 		respond "Object Name: #{@objectname}"
 		respond "Object ID: #{@objectid}"
-		respond 
+		respond
 		unless $ResultValue.nil? then respond "Value: #{$ResultValue}" end
 		unless $ResultPurpose.nil? then respond "Purpose: #{$ResultPurpose}" end
 		unless $ResultEnhance.nil? then respond "Enhansive: #{$ResultEnhance}" end
