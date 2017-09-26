@@ -260,7 +260,7 @@ class Lore
 				new_line = ''
 				sentences.each {|sentence|
 					if new_line.length + sentence.length < max_length
-						new_line += sentence
+						new_line = "#{new_line} #{sentence}"
 					else
 						fput "whisper ooc #{tgt} #{new_line}"
 						new_line = sentence
