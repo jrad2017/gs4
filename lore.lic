@@ -131,12 +131,11 @@ class Lore
 				@squelch = true && @Silent
 			when /^You are now speaking Common.$/
 				@squelch = false
+			end
+			if @squelch
+				nil
 			else
-				if @squelch
-					nil
-				else
-					server_string
-				end
+				server_string
 			end
 		}
 		if $Silent == true
