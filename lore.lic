@@ -267,27 +267,30 @@ class Lore
 		directory = basedir + "#{XMLData.game}-Lore/"
 		Dir.mkdir(basedir) unless File.exists?(basedir)
 		Dir.mkdir(directory) unless File.exists?(directory)
-
-		if File.exists?("#{$lich_dir}logs/#{XMLData.game}-Lore/#{@objectname}-#{@objectid}.txt")
-			my_file = File.open("#{$lich_dir}logs/#{XMLData.game}-Lore/#{@objectname}-#{@objectid}.txt", "w+")
-		else
-			my_file = File.new("#{$lich_dir}logs/#{XMLData.game}-Lore/#{@objectname}-#{@objectid}.txt", "w")
+		begin
+			if File.exists?("#{directory}#{@objectname}-#{@objectid}.txt")
+				my_file = File.open("#{directory}#{@objectname}-#{@objectid}.txt", "w+")
+			else
+				my_file = File.new("#{directory}#{@objectname}-#{@objectid}.txt", "w")
+			end
+			my_file.write("Object Name:#{GameObj.right_hand.name}\n")
+			my_file.write("Object ID:#{GameObj.right_hand.id}\n")
+			if $ResultValue
+				my_file.write("Value:#{$ResultValue}\n")
+			end
+			if $ResultPurpose
+				my_file.write("Purpose:#{$ResultPurpose}\n")
+			end
+			if $ResultEnhance
+				my_file.write("Enhance:#{$ResultEnhance}\n")
+			end
+			if $ResultAbility
+				my_file.write("Ability:#{$ResultAbility}\n")
+			end
+			my_file.close
+		rescue Exception => msg
+			respond "Could not write loresong to log file!"
 		end
-		my_file.write("Object Name:#{GameObj.right_hand.name}\n")
-		my_file.write("Object ID:#{GameObj.right_hand.id}\n")
-		if $ResultValue
-			my_file.write("Value:#{$ResultValue}\n")
-		end
-		if $ResultPurpose
-			my_file.write("Purpose:#{$ResultPurpose}\n")
-		end
-		if $ResultEnhance
-			my_file.write("Enhance:#{$ResultEnhance}\n")
-		end
-		if $ResultAbility
-			my_file.write("Ability:#{$ResultAbility}\n")
-		end
-		my_file.close
 	end
 
 	def display_data
@@ -305,27 +308,33 @@ class Lore
 	end
 
 	def load_data
-		if File.exists?("#{$lich_dir}logs/#{XMLData.game}-Lore/#{@objectname}-#{@objectid}.txt")
-			datafile = File.open("#{$lich_dir}logs/#{XMLData.game}-Lore/#{@objectname}-#{@objectid}.txt", "r")
-			while (line = datafile.gets)
-				if line.include?("Value:")
-					data = line.gsub("Value:", "")
-					data.delete!("\n")
-					$ResultValue = data;
-				elsif line.include?("Purpose:")
-					data = line.gsub("Purpose:", "")
-					data.delete!("\n")
-					$ResultPurpose = data;
-				elsif line.include?("Enhance:")
-					data = line.gsub("Enhance:", "")
-					data.delete!("\n")
-					$ResultEnhance = data;
-				elsif line.include?("Ability:")
-					data = line.gsub("Ability:", "")
-					$ResultAbility = data;
+		basedir = "#{$lich_dir}logs/"
+		directory = basedir + "#{XMLData.game}-Lore/"
+		begin
+			if File.exists?("#{directory}#{@objectname}-#{@objectid}.txt")
+				datafile = File.open("#{directory}#{@objectname}-#{@objectid}.txt", "r")
+				while (line = datafile.gets)
+					if line.include?("Value:")
+						data = line.gsub("Value:", "")
+						data.delete!("\n")
+						$ResultValue = data;
+					elsif line.include?("Purpose:")
+						data = line.gsub("Purpose:", "")
+						data.delete!("\n")
+						$ResultPurpose = data;
+					elsif line.include?("Enhance:")
+						data = line.gsub("Enhance:", "")
+						data.delete!("\n")
+						$ResultEnhance = data;
+					elsif line.include?("Ability:")
+						data = line.gsub("Ability:", "")
+						$ResultAbility = data;
+					end
 				end
+				datafile.close
 			end
-			datafile.close
+		rescue Exception => msg
+			respond "Failed to load log data."
 		end
 	end
 end
