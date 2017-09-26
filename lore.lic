@@ -82,7 +82,7 @@ ResultValue = nil
 
 def SingLore(var)
 	loretype = [", please tell me and tell me true,;What might be your own value?", " I am listening and it is all coming clear,;But your purpose is what I would most like to hear.", " it will be helpful for me to know,;What enhance within will you now show?", ", from my ears and eyes you have nothing to hide,;What special ability do you hold inside?"]
-	script.want_downstream_xml = true
+	Script.current.want_downstream_xml = true
 	results = []
 	reading_results = false
 	dothistimeout "loresing #{$object}#{loretype[var]}", 15, /^Roundtime:/
@@ -98,7 +98,7 @@ def SingLore(var)
 			end
 		end
 	end
-	script.want_downstream_xml = false
+	Script.current.want_downstream_xml = false
 	results.join("\n")
 end
 
