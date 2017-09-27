@@ -476,6 +476,11 @@ def print_all_targets
 	}
 end
 
+def moving?
+	#Simple wrapper around logic to test if character is in motion
+	running?("go2") || running?("wander")
+end
+
 def execute_commands
 	#This defines the core hunting loop for all characters, executing a sequence of functions from a specified profile
 	target = nil
@@ -506,8 +511,8 @@ def execute_commands
 		end
 
 		deltaT = 0.0
-		#Not poaching, valid commands
-		if !dead? && !poaching? && cmds
+		#Not poaching, valid commands, not in motion
+		if !dead? && !moving? && !poaching? && cmds
 			#Only look for a target if we need it
 			if target && target.status =~ /dead|gone/
 				target = nil
@@ -527,7 +532,10 @@ def execute_commands
 			startTime = Time.now
 			#Executes each command in order, providing target if requested
 			cmds.each{ |cmd|
-				wait_while {running?("go2") || running?("wander")}
+				#This means we need to retarget and restart command loop
+				if moving? || poaching?
+					break
+				end
 				if cmd.parameters[0].include?(:target)
 					if target
 						cmd.call target
