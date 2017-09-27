@@ -199,6 +199,7 @@ class Lore
 			end
 			exit
 		end
+
 		whisper_target = nil
 		args = Script.current.vars[0]
 		case args
@@ -254,7 +255,7 @@ class Lore
 		end
 
 		clamped_whisper = proc {|tgt, line|
-			max_length = 512
+			max_length = 1000
 			if line.length < max_length
 				fput "whisper ooc #{tgt} #{line}"
 			else
@@ -276,18 +277,8 @@ class Lore
 
 		if whisper_target
 			fput "whisper ooc #{whisper_target} About your #{objectname}:"
-			if $ResultValue
-				clamped_whisper.call whisper_target, $ResultValue
-			end
-			if $ResultPurpose
-				clamped_whisper.call whisper_target, $ResultPurpose
-			end
-			if $ResultEnhance
-				clamped_whisper.call whisper_target, $ResultEnhance
-			end
-			if $ResultAbility
-				clamped_whisper.call whisper_target, $ResultAbility
-			end
+			text = "#{$ResultValue} #{$ResultPurpose} #{$ResultEnhance} #{$ResultAbility}"
+			clamped_whisper.call whisper_target, text
 		end
 
 		if $Enable_Logs == true then log end
