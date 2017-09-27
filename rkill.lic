@@ -52,16 +52,49 @@ end
 	@current_group = get_current_group
 }
 
+@current_room_id = nil
+@new_room = true
+@poaching = true
+@is_peer = false
+
 def poaching?
-	#Test if someone in the room is unexpected, to avoid poaching
-	#Get minimal list of names to care about
-	pcs = Set.new @core_group
-	@group_mutex.synchronize {
-		pcs.merge @current_group
-	}
-	party_members = Regexp.new pcs.to_a.join("|")
-	#Also check disk names against party members
-	GameObj.pcs.any? {|pc| pc.name !~ party_members} || GameObj.loot.any? {|obj| obj.noun == "disk" && obj.name !~ party_members}
+	#Test if someone in the room is unexpected, to avoid poaching.
+	#This respects room order, e.g. who was in the room first has hunting rights
+	#If that person(group) leaves, it is no longer considered poaching
+	if !@poach_targets
+		@poach_targets = []
+	end
+	if @new_room
+		@poach_targets = []
+		pcs = Set.new @core_group
+		@group_mutex.synchronize {
+			pcs.merge @current_group
+		}
+		party_members = Regexp.new pcs.to_a.join("|"), Regexp::IGNORECASE
+		#Build list of PC's not recognized, and also check disk names against party members
+		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members} || []
+		disk_pcs = GameObj.loot.select {|obj| obj.noun == "disk" && obj.name !~ party_members} || []
+		#We need nouns for comparison
+		@poach_targets = strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect {|disk|
+			disk.name =~ /(?<name>\w+) disk/
+			$~[:name]
+		}
+		@poaching = !@poach_targets.empty?
+		@new_room = false
+	else
+		old_strangers = Set.new @poach_targets
+		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members} || []
+		disk_pcs = GameObj.loot.select {|obj| obj.noun == "disk" && obj.name !~ party_members} || []
+		current_strangers = Set.new strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect {|disk|
+			disk.name =~ /(?<name>\w+) disk/
+			$~[:name]
+		}
+		#Use set intersection as a fast way to tell if people left
+		if (current_strangers & old_strangers).empty?
+			@poaching = false
+		end
+	end
+	@poaching
 end
 
 def change_stance new_stance, force: true
@@ -686,20 +719,26 @@ command_hook = proc { |line|
 #Procedure for processing people joining/leaving the group organically
 group_hook = proc {|line|
 	case line
-	when /$(?<name>\w+) joins (your|\w+'s) group.^/
+	when /^(?<name>\w+) joins (your|\w+'s) group.$/
 		#Add person to group
 		@group_mutex.synchronize {
 			@current_group.push $~[:name]
 		}
-		nil
-	when /$(?<name>\w+) leaves (your|\w+'s) group.^/
+	when /^(?<name>\w+) leaves (your|\w+'s) group.$/
 		@group_mutex.synchronize {
 			@current_group.delete $~[:name]
 		}
-		nil
-	else
-		line
+	when /^The Symbol of Need begins to burn in your mind and an image appears before you of|^You peer (?:\w+) and see/
+		@is_peer = true
+	when /Obvious (exits|paths):/
+		if @is_peer
+			@is_peer = false
+		elsif @current_room_id && Room.current.id != @current_room_id
+			@new_room = true
+			@current_room_id = Room.current.id
+		end
 	end
+	line
 }
 
 UpstreamHook.add @cmd_string, command_hook
