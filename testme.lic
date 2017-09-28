@@ -247,270 +247,6 @@ check_temp_lines = proc{
 	}
 }
 
-silence_it = proc{
-	action = proc { |server_string|
-		if server_string =~ /Please rephrase that command\./
-			DownstreamHook.remove("#{script.name}_silence_it")
-			nil
-		else
-			server_string
-		end
-	}
-		DownstreamHook.add("#{script.name}_silence_it", action)
-		silence_me
-		fput "stuff incoming"
-		silence_me
-}
-
-before_dying { DownstreamHook.remove("#{script.name}_silence_it") }
-
-wait_in_customer_mode = proc{
-	fput "decline"
-	while line = get
-		if line =~ /^([a-zA-Z]+) offers you .*\.  Click ACCEPT to accept the offer or DECLINE to decline it\.  The offer will expire in 30 seconds\./
-			customer_name = $1
-			$currently_singing_to_an_item = true
-			waitrt?
-			until checkright == nil
-				waitrt?
-				fput "stow right" if checkright
-				sleep 0.2
-			end
-			until checkleft == nil
-				waitrt?
-				fput "stow left" if checkleft
-				sleep 0.2
-			end
-			fput "accept"
-			while line = get
-				if line =~ /^You accept/
-					break
-				elsif line =~ /^You could not possibly accept all that extra weight\!/
-					fput "whisper ooc #{customer_name} Sorry, I am too encumbered at the moment. Let me fix this."
-					$currently_singing_to_an_item = nil
-					exit
-				elsif line =~ /[a-zA-Z]+ has cancelled the offer\.|You both have to be in the same place for that\./
-					customer_canceled = true
-					break
-				end
-			end
-			if customer_canceled
-				$currently_singing_to_an_item = nil
-				customer_canceled = nil
-			else
-				fput "swap" if checkright == nil
-				wait_until { checkright }
-				item = GameObj.right_hand.id
-				test_stuff.call
-			end
-		end
-	end
-}
-
-give_customer_item_back = proc{
-	waitrt?
-	fput "cancel"
-	result = dothistimeout "give #{customer_name}", 2, /You offer your|\.\.\.wait (\d+) seconds\./
-	if result =~ /\.\.\.wait (\d+) seconds\./
-		sleep $1.to_i
-		give_customer_item_back.call
-	elsif result =~ /You offer your/
-		while line = get
-			if line =~ /^[a-zA-Z]+ has accepted your|What is it you\'re trying to give\?|What are you trying to give\?/
-				$currently_singing_to_an_item = nil
-				waitrt?
-				fput "decline"
-				break
-			elsif line =~ /^[a-zA-Z]+ already has an outstanding offer\./
-				sleep 5
-				give_customer_item_back.call
-				break
-			elsif line =~ /^Your offer to [a-zA-Z]+ has expired\.|^[a-zA-Z]+ has declined the offer\./
-				give_customer_item_back.call
-				break
-			end
-		end
-	elsif result.nil?
-		give_customer_item_back.call
-	end
-}
-
-wait_mode = proc{
-	while line = get
-		if line =~ /(.*) offers you/i
-			person = $1
-			break
-		end
-	end
-	fput "accept"
-	sleep 1
-	wait_until { checkright }
-	case Char.prof
-	when "Warrior"
-		warrior_asses.call
-	when "Bard"
-		loresing.call
-	end
-	fput "whisper #{person} #{wresults[1]}"
-	waitrt?
-	fput "cancel"
-	fput "give #{person}"
-	wait_mode.call
-}
-
-warrior_assess = proc{
-	fput "assess ##{item}"
-	while line = get
-		if line =~ /it looks like it is (.*) padded against critical blows./
-			wresults[1] = "Padding: #$1 crit padded"
-		elsif line =~ /it looks like it is (.*) padded, lessening the damage the wearer takes./
-			wresults[1] = "Padding: #$1 damage padded"
-		elsif line =~ /it looks like it is (.*) weighted to inflict more damage./
-			wresults[1] = "Weighting: #$1 damage weighted"
-		elsif line =~ /it looks like it is (.*) weighted to inflict more critical blows/
-			wresults[1] = "Weighting: #$1 crit weighted"
-		elsif line =~ /it looks like it is weighted to inflict more damage/
-			wresults[1] = "Weighting: damage weighted, couldn't detect amount"
-		elsif line =~ /it looks like it is weighted to inflict more critical blows/
-			wresults[1] = "Weighting: crit weighted, couldn't detect amount"
-		elsif line =~ /it looks like it is padded against critical blows./
-			wresults[1] = "Padding: #$1 crit padded, couldn't detect amount"
-		elsif line =~ /it looks like it is padded, lessening the damage the wearer takes./
-			wresults[1] = "Padding: #$1 damage padded, couldn't detect amount"
-		elsif line =~ /It appears to have .* \((.*)\) to cause critical wounds/
-			wresults[1] = "Weighting: #$1 crit weighted"
-		elsif line =~ /but note nothing unusual about it./
-			wresults[1] = "Couldn't detect any weighting or padding"
-		end
-		break if line =~ /but note nothing unusual about it|weighted|padded/i
-	end
-}
-
-display_results = proc{
-	respond "\n"
-	respond "*************************"
-	respond "#{checkname}'s #{do_all_container}" if do_all
-	respond "#{itemname}"
-	respond "Look description: #{item_description}"
-	respond "\n" if results[1] != nil
-	respond "Loresong information" if results[1] != nil
-	results[9] = "Enhancive bonus: #{results[9]}" if results[9] != nil
-	results[10] = "Enhancive bonus: #{results[10]}" if results[10] != nil
-	results[11] = "Enhancive bonus: #{results[11]}" if results[11] != nil
-	results[12] = "Enhancive bonus: #{results[12]}" if results[12] != nil
-	results[13] = "Enhancive bonus: #{results[13]}" if results[13] != nil
-	results[14] = "Enhancive bonus: #{results[14]}" if results[14] != nil
-	results.each{|i|
-		respond "#{i}" if i != nil
-	}
-	respond "\n"
-	respond "Inspect/Analyze Information"
-	iresults.each{|i|
-		respond "#{i}" if i != nil
-	}
-	respond "\n" if eresults[1] != nil
-	respond "Ensorcell Information" if eresults[1] != nil
-	eresults.each{|i|
-		respond "#{i}" if i != nil
-	}
-	respond "\n" if wresults[1] != nil
-	respond "Warrior assess Information" if wresults[1] != nil
-	wresults.each{|i|
-		respond "#{i}" if i != nil
-	}
-	respond "\n" if fresults[1] != nil
-	respond "Fusion Information" if fresults[1] != nil
-	fresults.each{|i|
-		respond "#{i}" if i != nil
-	}
-
-	zresults.each{ |i|
-		if i != nil
-			zest_found = 1
-		end
-	}
-
-	if zest_found == 0
-		respond "\n"
-		respond "I didn't find any zests."
-		respond "*************************"
-		respond "\n"
-	else
-		respond "\n"
-		respond "The following may be zests:"
-		zest_test_number = -1
-		loop{
-			zest_test_number = zest_test_number + 1
-			respond "#{zresults[zest_test_number]}: #{successful_zest[zest_test_number]}" if zresults[zest_test_number] != nil and successful_zest[zest_test_number] != nil
-			respond "#{zresults[zest_test_number]}: Couldn't detect anything, you may have been lagging. Try performing verb later." if zresults[zest_test_number] != nil and successful_zest[zest_test_number] == nil
-			break if zest[zest_test_number] == "remove"
-		}
-
-	respond "*************************"
-	respond "\n"
-	end
-
-	if UserVars.testme_save == "yes"
-		Script.log "\n"
-		Script.log "*************************"
-		Script.log "#{checkname}'s #{do_all_container}" if do_all
-		Script.log "\n"
-		Script.log "#{itemname}"
-		Script.log "Look description: #{item_description}"
-		Script.log "\n" if results[1] != nil
-		Script.log "Loresong information" if results[1] != nil
-		results.each{|i|
-			Script.log "#{i}" if i != nil
-		}
-		Script.log "\n"
-		Script.log "Inspect/Analyze Information"
-		iresults.each{|i|
-			Script.log "#{i}" if i != nil
-		}
-		Script.log "\n" if eresults[1] != nil
-		Script.log "Ensorcell Information" if eresults[1] != nil
-		eresults.each{|i|
-			Script.log "#{i}" if i != nil
-		}
-		Script.log "\n" if wresults[1] != nil
-		Script.log "Warrior assess Information" if wresults[1] != nil
-		wresults.each{|i|
-			Script.log "#{i}" if i != nil
-		}
-		Script.log "\n" if fresults[1] != nil
-		Script.log "Fusion Information" if fresults[1] != nil
-		fresults.each{|i|
-			Script.log "#{i}" if i != nil
-		}
-
-		zresults.each{ |i|
-			if i != nil
-				zest_found = 1
-			end
-		}
-
-		if zest_found == 0
-			Script.log "\n"
-			Script.log "I didn't find any zests."
-			Script.log "*************************"
-			Script.log "\n"
-		else
-			Script.log "\n"
-			Script.log "The following may be zests:"
-			zest_test_number = -1
-			loop{
-				zest_test_number = zest_test_number + 1
-				Script.log "#{zresults[zest_test_number]}: #{successful_zest[zest_test_number]}" if zresults[zest_test_number] != nil and successful_zest[zest_test_number] != nil
-				Script.log "#{zresults[zest_test_number]}: Couldn't detect anything, you may have been lagging. Try performing verb later." if zresults[zest_test_number] != nil and successful_zest[zest_test_number] == nil
-				break if zest[zest_test_number] == "remove"
-			}
-
-		Script.log "*************************"
-		Script.log "\n"
-		end
-	end
-}
-
 loresing = proc {
 	fput "speak bard"
 	(waitrt?;waitcastrt?)
@@ -945,6 +681,293 @@ loresing = proc {
 	end
 	fput "speak common"
 	results
+}
+
+silence_it = proc{
+	action = proc { |server_string|
+		if server_string =~ /Please rephrase that command\./
+			DownstreamHook.remove("#{script.name}_silence_it")
+			nil
+		else
+			server_string
+		end
+	}
+		DownstreamHook.add("#{script.name}_silence_it", action)
+		silence_me
+		fput "stuff incoming"
+		silence_me
+}
+
+before_dying { DownstreamHook.remove("#{script.name}_silence_it") }
+
+wait_in_customer_mode = proc{
+	fput "decline"
+	while line = get
+		if line =~ /^([a-zA-Z]+) offers you .*\.  Click ACCEPT to accept the offer or DECLINE to decline it\.  The offer will expire in 30 seconds\./
+			customer_name = $1
+			$currently_singing_to_an_item = true
+			waitrt?
+			until checkright == nil
+				waitrt?
+				fput "stow right" if checkright
+				sleep 0.2
+			end
+			until checkleft == nil
+				waitrt?
+				fput "stow left" if checkleft
+				sleep 0.2
+			end
+			fput "accept"
+			while line = get
+				if line =~ /^You accept/
+					break
+				elsif line =~ /^You could not possibly accept all that extra weight\!/
+					fput "whisper ooc #{customer_name} Sorry, I am too encumbered at the moment. Let me fix this."
+					$currently_singing_to_an_item = nil
+					exit
+				elsif line =~ /[a-zA-Z]+ has cancelled the offer\.|You both have to be in the same place for that\./
+					customer_canceled = true
+					break
+				end
+			end
+			if customer_canceled
+				$currently_singing_to_an_item = nil
+				customer_canceled = nil
+			else
+				fput "swap" if checkright == nil
+				wait_until { checkright }
+				item = GameObj.right_hand.id
+				test_stuff.call
+			end
+		end
+	end
+}
+
+give_customer_item_back = proc{
+	waitrt?
+	fput "cancel"
+	result = dothistimeout "give #{customer_name}", 2, /You offer your|\.\.\.wait (\d+) seconds\./
+	if result =~ /\.\.\.wait (\d+) seconds\./
+		sleep $1.to_i
+		give_customer_item_back.call
+	elsif result =~ /You offer your/
+		while line = get
+			if line =~ /^[a-zA-Z]+ has accepted your|What is it you\'re trying to give\?|What are you trying to give\?/
+				$currently_singing_to_an_item = nil
+				waitrt?
+				fput "decline"
+				break
+			elsif line =~ /^[a-zA-Z]+ already has an outstanding offer\./
+				sleep 5
+				give_customer_item_back.call
+				break
+			elsif line =~ /^Your offer to [a-zA-Z]+ has expired\.|^[a-zA-Z]+ has declined the offer\./
+				give_customer_item_back.call
+				break
+			end
+		end
+	elsif result.nil?
+		give_customer_item_back.call
+	end
+}
+
+clamped_whisper = proc {|tgt, lines|
+	max_length = 1000
+	new_line = ''
+	lines.each {|sentence|
+		if sentence.nil? || sentence.strip.empty?
+			next
+		end
+		sentence.strip!
+		if new_line.length + sentence.length < max_length
+			new_line = "#{new_line}#{sentence}. "
+		else
+			if !new_line.empty?
+				fput "whisper ooc #{tgt} #{new_line}"
+			end
+			new_line = sentence
+		end
+	}
+	unless new_line.empty?
+		fput "whisper ooc #{tgt} #{new_line}"
+	end
+}
+
+wait_mode = proc{
+	while line = get
+		if line =~ /(.*) offers you/i
+			person = $1
+			break
+		end
+	end
+	fput "accept"
+	sleep 1
+	wait_until { checkright }
+	case Char.prof
+	when "Warrior"
+		warrior_asses.call
+		fput "whisper #{person} #{wresults[1]}"
+	when "Bard"
+		loresing.call
+		respond results
+		clamped_whisper.call person, results
+	end
+	waitrt?
+	give_customer_item_back.call
+	wait_mode.call
+}
+
+warrior_assess = proc{
+	fput "assess ##{item}"
+	while line = get
+		if line =~ /it looks like it is (.*) padded against critical blows./
+			wresults[1] = "Padding: #$1 crit padded"
+		elsif line =~ /it looks like it is (.*) padded, lessening the damage the wearer takes./
+			wresults[1] = "Padding: #$1 damage padded"
+		elsif line =~ /it looks like it is (.*) weighted to inflict more damage./
+			wresults[1] = "Weighting: #$1 damage weighted"
+		elsif line =~ /it looks like it is (.*) weighted to inflict more critical blows/
+			wresults[1] = "Weighting: #$1 crit weighted"
+		elsif line =~ /it looks like it is weighted to inflict more damage/
+			wresults[1] = "Weighting: damage weighted, couldn't detect amount"
+		elsif line =~ /it looks like it is weighted to inflict more critical blows/
+			wresults[1] = "Weighting: crit weighted, couldn't detect amount"
+		elsif line =~ /it looks like it is padded against critical blows./
+			wresults[1] = "Padding: #$1 crit padded, couldn't detect amount"
+		elsif line =~ /it looks like it is padded, lessening the damage the wearer takes./
+			wresults[1] = "Padding: #$1 damage padded, couldn't detect amount"
+		elsif line =~ /It appears to have .* \((.*)\) to cause critical wounds/
+			wresults[1] = "Weighting: #$1 crit weighted"
+		elsif line =~ /but note nothing unusual about it./
+			wresults[1] = "Couldn't detect any weighting or padding"
+		end
+		break if line =~ /but note nothing unusual about it|weighted|padded/i
+	end
+}
+
+display_results = proc{
+	respond "\n"
+	respond "*************************"
+	respond "#{checkname}'s #{do_all_container}" if do_all
+	respond "#{itemname}"
+	respond "Look description: #{item_description}"
+	respond "\n" if results[1] != nil
+	respond "Loresong information" if results[1] != nil
+	results[9] = "Enhancive bonus: #{results[9]}" if results[9] != nil
+	results[10] = "Enhancive bonus: #{results[10]}" if results[10] != nil
+	results[11] = "Enhancive bonus: #{results[11]}" if results[11] != nil
+	results[12] = "Enhancive bonus: #{results[12]}" if results[12] != nil
+	results[13] = "Enhancive bonus: #{results[13]}" if results[13] != nil
+	results[14] = "Enhancive bonus: #{results[14]}" if results[14] != nil
+	results.each{|i|
+		respond "#{i}" if i != nil
+	}
+	respond "\n"
+	respond "Inspect/Analyze Information"
+	iresults.each{|i|
+		respond "#{i}" if i != nil
+	}
+	respond "\n" if eresults[1] != nil
+	respond "Ensorcell Information" if eresults[1] != nil
+	eresults.each{|i|
+		respond "#{i}" if i != nil
+	}
+	respond "\n" if wresults[1] != nil
+	respond "Warrior assess Information" if wresults[1] != nil
+	wresults.each{|i|
+		respond "#{i}" if i != nil
+	}
+	respond "\n" if fresults[1] != nil
+	respond "Fusion Information" if fresults[1] != nil
+	fresults.each{|i|
+		respond "#{i}" if i != nil
+	}
+
+	zresults.each{ |i|
+		if i != nil
+			zest_found = 1
+		end
+	}
+
+	if zest_found == 0
+		respond "\n"
+		respond "I didn't find any zests."
+		respond "*************************"
+		respond "\n"
+	else
+		respond "\n"
+		respond "The following may be zests:"
+		zest_test_number = -1
+		loop{
+			zest_test_number = zest_test_number + 1
+			respond "#{zresults[zest_test_number]}: #{successful_zest[zest_test_number]}" if zresults[zest_test_number] != nil and successful_zest[zest_test_number] != nil
+			respond "#{zresults[zest_test_number]}: Couldn't detect anything, you may have been lagging. Try performing verb later." if zresults[zest_test_number] != nil and successful_zest[zest_test_number] == nil
+			break if zest[zest_test_number] == "remove"
+		}
+
+	respond "*************************"
+	respond "\n"
+	end
+
+	if UserVars.testme_save == "yes"
+		Script.log "\n"
+		Script.log "*************************"
+		Script.log "#{checkname}'s #{do_all_container}" if do_all
+		Script.log "\n"
+		Script.log "#{itemname}"
+		Script.log "Look description: #{item_description}"
+		Script.log "\n" if results[1] != nil
+		Script.log "Loresong information" if results[1] != nil
+		results.each{|i|
+			Script.log "#{i}" if i != nil
+		}
+		Script.log "\n"
+		Script.log "Inspect/Analyze Information"
+		iresults.each{|i|
+			Script.log "#{i}" if i != nil
+		}
+		Script.log "\n" if eresults[1] != nil
+		Script.log "Ensorcell Information" if eresults[1] != nil
+		eresults.each{|i|
+			Script.log "#{i}" if i != nil
+		}
+		Script.log "\n" if wresults[1] != nil
+		Script.log "Warrior assess Information" if wresults[1] != nil
+		wresults.each{|i|
+			Script.log "#{i}" if i != nil
+		}
+		Script.log "\n" if fresults[1] != nil
+		Script.log "Fusion Information" if fresults[1] != nil
+		fresults.each{|i|
+			Script.log "#{i}" if i != nil
+		}
+
+		zresults.each{ |i|
+			if i != nil
+				zest_found = 1
+			end
+		}
+
+		if zest_found == 0
+			Script.log "\n"
+			Script.log "I didn't find any zests."
+			Script.log "*************************"
+			Script.log "\n"
+		else
+			Script.log "\n"
+			Script.log "The following may be zests:"
+			zest_test_number = -1
+			loop{
+				zest_test_number = zest_test_number + 1
+				Script.log "#{zresults[zest_test_number]}: #{successful_zest[zest_test_number]}" if zresults[zest_test_number] != nil and successful_zest[zest_test_number] != nil
+				Script.log "#{zresults[zest_test_number]}: Couldn't detect anything, you may have been lagging. Try performing verb later." if zresults[zest_test_number] != nil and successful_zest[zest_test_number] == nil
+				break if zest[zest_test_number] == "remove"
+			}
+
+		Script.log "*************************"
+		Script.log "\n"
+		end
+	end
 }
 
 test_stuff = proc{
