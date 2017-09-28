@@ -67,6 +67,7 @@ def poaching?
 	end
 	@room_mutex.synchronize {
 		if Room.current.id != @current_room_id
+			respond "Considering outdated room, assuming poaching until confirmed"
 			@poaching = true
 			return @poaching
 		end
@@ -86,6 +87,7 @@ def poaching?
 			disk.name =~ /(?<name>\w+) disk/
 			$~[:name]
 		}
+		respond "Room #{Room.current.id} Poaching: #{@poach_targets}"
 		@poaching = !@poach_targets.empty?
 		@new_room = false
 	else
@@ -99,6 +101,9 @@ def poaching?
 		@poach_targets = (current_strangers & old_strangers).to_a
 		#Use set intersection as a fast way to tell if people left
 		if @poach_targets.empty?
+			if @poaching
+				respond "No longer poaching #{@poach_targets}"
+			end
 			@poaching = false
 		end
 	end
