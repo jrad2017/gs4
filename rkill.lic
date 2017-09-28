@@ -66,7 +66,7 @@ def poaching?
 		@poach_targets = []
 	end
 	@room_mutex.synchronize {
-		if Room.current.id != @current_room_id
+		if @current_room_id && Room.current.id != @current_room_id
 			respond "Considering outdated room, assuming poaching until confirmed"
 			@poaching = true
 			return @poaching
@@ -751,8 +751,8 @@ group_hook = proc {|line|
 		}
 	when /^The Symbol of Need begins to burn in your mind and an image appears before you of|^You peer (?:\w+) and see/
 		@is_peer = true
-	when /Obvious (exits|paths):/
-		room_mutex.synchronize {
+	when /^Obvious (exits|paths):/
+		@room_mutex.synchronize {
 			if @is_peer
 				@is_peer = false
 			elsif @current_room_id && Room.current.id != @current_room_id
@@ -763,7 +763,7 @@ group_hook = proc {|line|
 	end
 	line
 }
-
+@current_room_id = Room.current.id
 UpstreamHook.add @cmd_string, command_hook
 DownstreamHook.add "#{script.name} update_group", group_hook
 before_dying {
