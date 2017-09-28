@@ -47,6 +47,7 @@ end
 
 @group_mutex = Mutex.new
 @vars_mutex = Mutex.new
+@room_mutex = Mutex.new
 
 @group_mutex.synchronize {
 	@current_group = get_current_group
@@ -64,6 +65,11 @@ def poaching?
 	if !@poach_targets
 		@poach_targets = []
 	end
+	@room_mutex.synchronize {
+		if Room.current.id != @current_room_id
+			return true
+		end
+	}
 	if @new_room
 		@poach_targets = []
 		pcs = Set.new @core_group
@@ -739,12 +745,14 @@ group_hook = proc {|line|
 	when /^The Symbol of Need begins to burn in your mind and an image appears before you of|^You peer (?:\w+) and see/
 		@is_peer = true
 	when /Obvious (exits|paths):/
-		if @is_peer
-			@is_peer = false
-		elsif @current_room_id && Room.current.id != @current_room_id
-			@new_room = true
-			@current_room_id = Room.current.id
-		end
+		room_mutex.synchronize {
+			if @is_peer
+				@is_peer = false
+			elsif @current_room_id && Room.current.id != @current_room_id
+				@new_room = true
+				@current_room_id = Room.current.id
+			end
+		}
 	end
 	line
 }
