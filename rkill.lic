@@ -10,6 +10,9 @@
 	Version: 2.0
 
 	changelog:
+		2.1:
+			Improved intelligence and reliability of poaching logic
+			Adding checks for common movement scripts to reduce targetting while running
 		2.0 (2017-09-23):
 			Added target priorities for focusing on certain enemies type before others
 			Improved group join/leave detection
