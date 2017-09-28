@@ -10,6 +10,9 @@
 	Version: 2.0
 
 	changelog:
+		2.1:
+			Improved intelligence and reliability of poaching logic
+			Adding checks for common movement scripts to reduce targetting while running
 		2.0 (2017-09-23):
 			Added target priorities for focusing on certain enemies type before others
 			Improved group join/leave detection
@@ -47,12 +50,13 @@ end
 
 @group_mutex = Mutex.new
 @vars_mutex = Mutex.new
+@room_mutex = Mutex.new
 
 @group_mutex.synchronize {
 	@current_group = get_current_group
 }
 
-@current_room_id = nil
+@current_room_id = Room.current.id
 @new_room = true
 @poaching = true
 @is_peer = false
@@ -61,10 +65,8 @@ def poaching?
 	#Test if someone in the room is unexpected, to avoid poaching.
 	#This respects room order, e.g. who was in the room first has hunting rights
 	#If that person(group) leaves, it is no longer considered poaching
-	if !@poach_targets
-		@poach_targets = []
-	end
-	if @new_room
+	@poach_targets ||= []
+	if Room.current.id != @current_room_id
 		@poach_targets = []
 		pcs = Set.new @core_group
 		@group_mutex.synchronize {
@@ -75,12 +77,13 @@ def poaching?
 		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members} || []
 		disk_pcs = GameObj.loot.select {|obj| obj.noun == "disk" && obj.name !~ party_members} || []
 		#We need nouns for comparison
-		@poach_targets = strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect {|disk|
+		@poach_targets = Set.new(strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect {|disk|
 			disk.name =~ /(?<name>\w+) disk/
 			$~[:name]
-		}
+		}).to_a
+		respond "Room #{Room.current.id} Poaching: #{@poach_targets}"
 		@poaching = !@poach_targets.empty?
-		@new_room = false
+		@current_room_id = Room.current.id
 	else
 		old_strangers = Set.new @poach_targets
 		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members} || []
@@ -89,8 +92,12 @@ def poaching?
 			disk.name =~ /(?<name>\w+) disk/
 			$~[:name]
 		}
+		@poach_targets = (current_strangers & old_strangers).to_a
 		#Use set intersection as a fast way to tell if people left
-		if (current_strangers & old_strangers).empty?
+		if @poach_targets.empty?
+			if @poaching
+				respond "No longer poaching #{@poach_targets}"
+			end
 			@poaching = false
 		end
 	end
@@ -476,6 +483,11 @@ def print_all_targets
 	}
 end
 
+def moving?
+	#Simple wrapper around logic to test if character is in motion
+	running?("go2") || running?("wander")
+end
+
 def execute_commands
 	#This defines the core hunting loop for all characters, executing a sequence of functions from a specified profile
 	target = nil
@@ -506,8 +518,8 @@ def execute_commands
 		end
 
 		deltaT = 0.0
-		#Not poaching, valid commands
-		if !dead? && !poaching? && cmds
+		#Not poaching, valid commands, not in motion
+		if !dead? && !moving? && !poaching? && cmds
 			#Only look for a target if we need it
 			if target && target.status =~ /dead|gone/
 				target = nil
@@ -527,7 +539,10 @@ def execute_commands
 			startTime = Time.now
 			#Executes each command in order, providing target if requested
 			cmds.each{ |cmd|
-				wait_while {running?("go2") || running?("wander")}
+				#This means we need to retarget and restart command loop
+				if moving? || poaching?
+					break
+				end
 				if cmd.parameters[0].include?(:target)
 					if target
 						cmd.call target
@@ -728,15 +743,6 @@ group_hook = proc {|line|
 		@group_mutex.synchronize {
 			@current_group.delete $~[:name]
 		}
-	when /^The Symbol of Need begins to burn in your mind and an image appears before you of|^You peer (?:\w+) and see/
-		@is_peer = true
-	when /Obvious (exits|paths):/
-		if @is_peer
-			@is_peer = false
-		elsif @current_room_id && Room.current.id != @current_room_id
-			@new_room = true
-			@current_room_id = Room.current.id
-		end
 	end
 	line
 }
