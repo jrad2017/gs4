@@ -53,7 +53,7 @@ end
 	@current_group = get_current_group
 }
 
-@current_room_id = nil
+@current_room_id = Room.current.id
 @new_room = true
 @poaching = true
 @is_peer = false
@@ -62,17 +62,8 @@ def poaching?
 	#Test if someone in the room is unexpected, to avoid poaching.
 	#This respects room order, e.g. who was in the room first has hunting rights
 	#If that person(group) leaves, it is no longer considered poaching
-	if !@poach_targets
-		@poach_targets = []
-	end
-	@room_mutex.synchronize {
-		if @current_room_id && Room.current.id != @current_room_id
-			respond "Considering outdated room, assuming poaching until confirmed"
-			@poaching = true
-			return @poaching
-		end
-	}
-	if @new_room
+	@poach_targets ||= []
+	if Room.current.id != @current_room_id
 		@poach_targets = []
 		pcs = Set.new @core_group
 		@group_mutex.synchronize {
@@ -83,13 +74,13 @@ def poaching?
 		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members} || []
 		disk_pcs = GameObj.loot.select {|obj| obj.noun == "disk" && obj.name !~ party_members} || []
 		#We need nouns for comparison
-		@poach_targets = strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect {|disk|
+		@poach_targets = Set.new(strange_pcs.collect {|pc| pc.noun} + disk_pcs.collect {|disk|
 			disk.name =~ /(?<name>\w+) disk/
 			$~[:name]
-		}
+		}).to_a
 		respond "Room #{Room.current.id} Poaching: #{@poach_targets}"
 		@poaching = !@poach_targets.empty?
-		@new_room = false
+		@current_room_id = Room.current.id
 	else
 		old_strangers = Set.new @poach_targets
 		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members} || []
@@ -749,21 +740,10 @@ group_hook = proc {|line|
 		@group_mutex.synchronize {
 			@current_group.delete $~[:name]
 		}
-	when /^The Symbol of Need begins to burn in your mind and an image appears before you of|^You peer (?:\w+) and see/
-		@is_peer = true
-	when /^Obvious (exits|paths):/
-		@room_mutex.synchronize {
-			if @is_peer
-				@is_peer = false
-			elsif @current_room_id && Room.current.id != @current_room_id
-				@new_room = true
-				@current_room_id = Room.current.id
-			end
-		}
 	end
 	line
 }
-@current_room_id = Room.current.id
+
 UpstreamHook.add @cmd_string, command_hook
 DownstreamHook.add "#{script.name} update_group", group_hook
 before_dying {
