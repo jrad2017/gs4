@@ -266,12 +266,15 @@ class Lore
 					if !sentence.empty? && new_line.length + sentence.length < max_length
 						new_line = "#{new_line}#{sentence.strip}. "
 					else
-						if !new_line.empty?
+						unless new_line.empty?
 							fput "whisper ooc #{tgt} #{new_line}"
 						end
 						new_line = sentence
 					end
 				}
+			end
+			unless new_line.empty?
+				fput "whisper ooc #{tgt} #{new_line}"
 			end
 		}
 
