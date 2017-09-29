@@ -712,10 +712,13 @@ def handle_group_cmds line
 		@vars_mutex.synchronize {
 			respond "Core group: #{Vars[@script_name]['core_group'].map(&:capitalize)}"
 		}
-	when /group add (?<name>\w+)/
+	when /group add (?<name>[\w ,]+)/
+		names = ($~[:name].split(",") || []).map {|pc| pc.strip.downcase}
 		@vars_mutex.synchronize {
 			pcs = Set.new Vars[@script_name]['core_group']
-			pcs.add $~[:name].downcase
+			names.each{ |name|
+				pcs.add name
+			}
 			Vars[@script_name]['core_group'] = pcs.to_a
 		}
 		respond "Added #{$~[:name]} to core group"
