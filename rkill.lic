@@ -54,7 +54,7 @@ end
 	@current_group = get_current_group
 }
 
-@current_room_id = Room.current.id
+@current_room_counter = nil
 @new_room = true
 @poaching = true
 @is_peer = false
@@ -64,7 +64,7 @@ def poaching?
 	#This respects room order, e.g. who was in the room first has hunting rights
 	#If that person(group) leaves, it is no longer considered poaching
 	@poach_targets ||= []
-	if Room.current.id != @current_room_id
+	if !@current_room_counter || XMLData.room_count != @current_room_counter
 		@poach_targets = []
 		pcs = Set.new
 		@vars_mutex.synchronize { pcs.merge Vars[@script_name]['core_group'] }
@@ -82,7 +82,7 @@ def poaching?
 		}).to_a
 		respond "Room #{Room.current.id} Poaching: #{@poach_targets}"
 		@poaching = !@poach_targets.empty?
-		@current_room_id = Room.current.id
+		@current_room_counter = XMLData.room_count
 	else
 		old_strangers = Set.new @poach_targets
 		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members} || []
