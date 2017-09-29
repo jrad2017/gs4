@@ -350,7 +350,7 @@ def cmd_empathiclink target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1117].known? and Spell[1117].affordable?
 	return if checkmana <= 45
-	return if GameObj.npcs.count { |npc| valid_target? npc, target_types: ["bandit"]} < 4
+	return if GameObj.npcs.count { |npc| valid_target? npc, valid_types: ["bandit"]} < 4
 
 	waitcastrt?
 	Spell[1117].cast "##{target.id}"
