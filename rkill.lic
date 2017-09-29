@@ -556,7 +556,6 @@ def execute_commands
 				if moving? || poaching?
 					break
 				end
-				respond "Executing #{cmd.to_s}"
 				if cmd.parameters[0].include?(:target)
 					if target
 						cmd.call target
