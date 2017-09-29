@@ -190,7 +190,7 @@ def cmd_smastery
   #Check if cooldown is in effect
   return if Spell[9604].active? || Spell[9603].active?
 
-	if !@smastery_cooldown || Time.now - @smastery_cooldown < 180
+	if !@smastery_cooldown || Time.now - @smastery_cooldown >= 180
 		respond "Shadow Mastery should cost #{Spell[9603].stamina_cost}, #{name} has #{checkstamina}, thus the affordable flag states #{Spell[9603].affordable?}"
 	  maintain_spells [Spell[9603]]
 	else
