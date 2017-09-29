@@ -58,12 +58,17 @@ end
 @new_room = true
 @poaching = true
 @is_peer = false
+@update_group = false
 
 def poaching?
 	#Test if someone in the room is unexpected, to avoid poaching.
 	#This respects room order, e.g. who was in the room first has hunting rights
 	#If that person(group) leaves, it is no longer considered poaching
 	@poach_targets ||= []
+	if @update_group
+		@groups_mutex.synchronize { @current_group = get_current_group }
+		@update_group = false
+	end
 	if !@current_room_counter || XMLData.room_count != @current_room_counter
 		@poach_targets = []
 		pcs = Set.new
@@ -754,7 +759,7 @@ command_hook = proc { |line|
 	case line
 	when /#{@cmd_string} update_group/
 		#Updates group for poaching tests
-		@group_mutex.synchronize { @current_group = get_current_group }
+		@update_group = true
 		nil
 	when /#{@cmd_string} commands/
 		respond "Available commands: #{@all_cmds}"
