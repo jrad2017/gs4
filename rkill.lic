@@ -733,7 +733,7 @@ def handle_group_cmds line
 		else
 			respond "Removed #{$~[:name]} from core group"
 		end
-	when /group set (?<names>[\w, ]+)?/
+	when /group set (?<name>[\w, ]+)?/
 		pcs = ($~[:name].split(",") || []).map {|pc| pc.strip.downcase}
 		@vars_mutex.synchronize { Vars[@script_name]['core_group'] = pcs }
 		respond "Core group set to #{pcs.map(&:capitalize)}"
