@@ -636,9 +636,10 @@ def handle_profile_cmds line
 		}
 	when /profile current\s?(?<set>\w+)?/
 		@vars_mutex.synchronize {
-			if $~[:set] && Vars[@script_name]['profiles'].include?($~[:set])
+			respond $~[:set].nil?
+			if Vars[@script_name]['profiles'].include?($~[:set])
 				Vars[@script_name]['current'] = $~[:set]
-			else
+			elsif !$~[:set].nil?
 				respond "#{$~[:set]} is not a valid profile!"
 			end
 		}
