@@ -364,7 +364,7 @@ def cmd_bind target
 	return unless Spell[214].known?
 
 	GameObj.npcs.each { |npc|
-		if checkmana > 50 && valid_target?(npc, invalid_status: ["frozen", "dead", "gone"])
+		if checkmana > 50 && valid_target?(npc, invalid_status: ["frozen", "dead", "gone"], invalid_types: ["passive npc", "pet", "familiar", "companion"])
 			Spell[214].cast "##{npc.id}"
 		end
 	}
