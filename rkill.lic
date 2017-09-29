@@ -11,6 +11,7 @@
 
 	changelog:
 		2.1:
+			Make the core group a configurable variable
 			Improved intelligence and reliability of poaching logic
 			Adding checks for common movement scripts to reduce targetting while running
 		2.0 (2017-09-23):
