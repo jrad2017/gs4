@@ -572,22 +572,10 @@ Vars[@script_name]['untargettable'] ||= []
 Vars[@script_name]['use_target_lists'] = true
 Vars[@script_name]['core_group'] ||= []
 
-#Sets up default profiles for current characters, can be deleted once configured
-if !Vars[@script_name]['profiles'].include? 'default'
-  case name
-  when "Alyssea"
-    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'stand', 'cmd_power', 'cmd_loot']
-  when "Archaeron"
-    Vars[@script_name]['profiles']['default'] = ['cmd_voln', 'stand', 'cmd_feint' , 'cmd_vibration', 'cmd_kill']
-  when "Predest"
-    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'stand', 'cmd_smastery', 'cmd_sweep', 'cmd_weed', 'cmd_swarm', 'cmd_camo', 'cmd_hide', 'cmd_ambush']
-  when "Ericos"
-    Vars[@script_name]['profiles']['default'] = ['cmd_col', 'stand']
-  end
-end
-
-if !Vars[@script_name].include? 'core_group' && (['Alyssea', 'Archaeron', 'Predest', 'Ericos'].include? name)
-	Vars[@script_name]['core_group'] = ["Ericos", "Predest", "Alyssea", "Archaeron", "Draccor", "Naina", "Szyxt"]
+def parse_names names
+	#Parse string of names into an array
+	names = Set.new (name.split(",") || []).map {|pc| pc.strip.delete('"').downcase}
+	names.to_a
 end
 
 @cmd_string = "#{$lich_char}#{@script_name}"
@@ -663,15 +651,17 @@ def handle_target_cmds line
 		else
 			print_all_targets
 		end
-	when /targets rm\s+(?<name>[\w "']+)/
-		name = $~[:name].strip.delete '"'
+	when /targets rm\s+(?<name>[\w "',]+)/
+		names = parse_names $~[:name]
 		@vars_mutex.synchronize {
-			found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == name }
-			if found
-				respond "Removed #{name} from target list"
-			else
-				respond "Could not find #{name} in target list"
-			end
+			names.each {|name|
+				found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == name }
+				if found
+					respond "Removed #{name} from target list"
+				else
+					respond "Could not find #{name} in target list"
+				end
+			}
 		}
 	when /targets add (?<pri>\d+)\s+[\[]?(?<name>[,\w "']+)[\]]?/
 		pri = $~[:pri].to_i
@@ -713,8 +703,8 @@ def handle_group_cmds line
 		@vars_mutex.synchronize {
 			respond "Core group: #{Vars[@script_name]['core_group'].map(&:capitalize)}"
 		}
-	when /group add (?<name>[\w ,]+)/
-		names = ($~[:name].split(",") || []).map {|pc| pc.strip.downcase}
+	when /group add (?<name>[\w ,'"]+)/
+		names = parse_name $~[:name]
 		@vars_mutex.synchronize {
 			pcs = Set.new Vars[@script_name]['core_group']
 			names.each{ |name|
@@ -722,20 +712,22 @@ def handle_group_cmds line
 			}
 			Vars[@script_name]['core_group'] = pcs.to_a
 		}
-		respond "Added #{$~[:name]} to core group"
-	when /group rm (?<name>\w+)/
-		pc = nil
+		respond "Added #{names.map {|name| name.capitalize}} to core group"
+	when /group rm (?<name>[\w' ,"]+)/
+		names = parse_name $~[:name]
 		@vars_mutex.synchronize {
-			pc = Vars[@script_name]['core_group'].delete $~[:name].downcase
+			names.each {|name|
+				pc = Vars[@script_name]['core_group'].delete name
+				if pc
+					respond "Removed #{name.capitalize} from core group"
+				else
+					respond "Could not find #{name.capitalize} to remove from core group"
+				end
+			}
 		}
-		if pc
-			respond "Could not find #{$~[:name].capitalize} to remove from core group"
-		else
-			respond "Removed #{$~[:name]} from core group"
-		end
 	when /group set (?<name>[\w, ]+)?/
-		pcs = ($~[:name].split(",") || []).map {|pc| pc.strip.downcase}
-		@vars_mutex.synchronize { Vars[@script_name]['core_group'] = pcs }
+		pcs = Set.new ($~[:name].split(",") || []).map {|pc| pc.strip.downcase}
+		@vars_mutex.synchronize { Vars[@script_name]['core_group'] = pcs.to_a }
 		respond "Core group set to #{pcs.map(&:capitalize)}"
 	else
 		respond "Commands for adjusting the PC's always considered part of the group for poaching"
