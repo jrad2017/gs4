@@ -741,9 +741,9 @@ def handle_group_cmds line
 		respond "Commands for adjusting the PC's always considered part of the group for poaching"
 		respond "Usage: #{@cmd_string} group [options]"
 		respond "  list: Lists the current core group"
-		respond "  add [name]: Adds player name to core group"
+		respond "  add [name1,name2,...nameN]: Adds player name(s) to core group"
 		respond "  rm [name]: Removes player name from core group"
-		respond "  set [name1,name2]: Overwrites the core group with the given list of names, with an empty list clearing the list"
+		respond "  set [name1,name2,...nameN]: Overwrites the core group with the given list of names, with an empty list clearing the list"
 	end
 end
 
@@ -775,6 +775,7 @@ command_hook = proc { |line|
 		respond "  commands: Lists available commands for profiles"
 		respond "  profile: Commands for configuring and setting attack profiles"
 		respond "  targets: Commands for setting target priorities"
+		respond "  group: Commands for modifying the list of people who are always considered part of your group for poaching detection."
 	else
 		line
 	end
