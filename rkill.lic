@@ -188,8 +188,14 @@ end
 
 def cmd_smastery
   #Check if cooldown is in effect
-  return if Spell[9604].active?
-  maintain_spells [Spell[9603]]
+  return if Spell[9604].active? || Spell[9603].active?
+
+	if !@smastery_cooldown || Time.now - @smastery_cooldown < 180
+	  maintain_spells [Spell[9603]]
+	end
+	if !@smastery_cooldown
+		@smastery_cooldown = Time.now
+	end
 end
 
 def cmd_fury target
