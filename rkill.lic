@@ -34,6 +34,7 @@ end
 def get_current_group
 	#Get members of current group
 	group = [name]
+	clear
 	fput "group"
 	while line = get
 		case line
@@ -156,6 +157,7 @@ def maintain_spells spells, min_mana: -1, max_mana: -1
   spells.each { |spell|
     if spell.known? and spell.affordable? and !spell.active?
       waitcastrt?
+			clear
       spell.cast
       waitcastrt?
     end
@@ -408,6 +410,7 @@ def find_any_target
 		if npc.type =~ /passive npc|pet|familiar|companion/ || Vars[@script_name]['untargettable'].include?(npc.name)
 			next
 		end
+		clear
 		fput "target ##{npc.id}"
 		line = get until line =~ /^Usage|^You are now (?<success>targeting)|^You do not have a target\.|You can only target creatures and players\.|You can't target|^Could not find a valid target\./
 		if !$~[:success]
