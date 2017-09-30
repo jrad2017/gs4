@@ -60,6 +60,7 @@ end
 @poaching = true
 @is_peer = false
 @update_group = false
+@check_retarget = false
 
 def poaching?
 	#Test if someone in the room is unexpected, to avoid poaching.
@@ -538,9 +539,10 @@ def execute_commands
 		#Not poaching, valid commands, not in motion
 		if !dead? && !moving? && !poaching? && cmds
 			#Only look for a target if we need it
-			if target && target.status =~ /dead|gone/
+			if target && (target.status =~ /dead|gone/ || (@check_retarget && valid_targets.none? {|noun, pri| /#{noun}/ =~ target.name}))
 				target = nil
 				target_pri = nil
+				@check_retarget = false
 			end
 			if select_target && use_target_list
 				new_target, new_pri = find_priority_target valid_targets
@@ -677,6 +679,7 @@ def handle_target_cmds line
 				found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == delname }
 				if found
 					respond "Removed #{delname} from target list"
+					@check_retarget = true
 				else
 					respond "Could not find #{delname} in target list"
 				end
