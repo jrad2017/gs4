@@ -725,10 +725,7 @@ def handle_group_cmds line
 	when /group add (?<name>[\w ,'"]+)/
 		names = parse_names $~[:name]
 		@vars_mutex.synchronize {
-			pcs = Set.new Vars[@script_name]['core_group']
-			names.each{ |name|
-				pcs.add name
-			}
+			pcs = Set.new(Vars[@script_name]['core_group'].map(&:downcase) + names)
 			Vars[@script_name]['core_group'] = pcs.to_a
 		}
 		respond "Added #{names.map {|name| name.capitalize}} to core group"
@@ -745,7 +742,7 @@ def handle_group_cmds line
 			}
 		}
 	when /group set (?<name>[\w, ]+)?/
-		pcs = Set.new ($~[:name].split(",") || []).map {|pc| pc.strip.downcase}
+		pcs = Set.new parse_names($~[:name])
 		@vars_mutex.synchronize { Vars[@script_name]['core_group'] = pcs.to_a }
 		respond "Core group set to #{pcs.map(&:capitalize)}"
 	else
