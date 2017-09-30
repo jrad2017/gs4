@@ -589,7 +589,7 @@ Vars[@script_name]['core_group'] ||= []
 
 def parse_names names
 	#Parse string of names into an array
-	names = Set.new (name.split(",") || []).map {|pc| pc.strip.delete('"').downcase}
+	names = Set.new (names.split(",") || []).map {|pc| pc.strip.delete('"').downcase}
 	names.to_a
 end
 
