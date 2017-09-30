@@ -670,12 +670,12 @@ def handle_target_cmds line
 	when /targets rm\s+(?<name>[\w "',]+)/
 		names = parse_names $~[:name]
 		@vars_mutex.synchronize {
-			names.each {|name|
-				found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == name }
+			names.each {|delname|
+				found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == delname }
 				if found
-					respond "Removed #{name} from target list"
+					respond "Removed #{delname} from target list"
 				else
-					respond "Could not find #{name} in target list"
+					respond "Could not find #{delname} in target list"
 				end
 			}
 		}
