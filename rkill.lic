@@ -11,6 +11,7 @@
 
 	changelog:
 		2.1:
+			Make the core group a configurable variable
 			Improved intelligence and reliability of poaching logic
 			Adding checks for common movement scripts to reduce targetting while running
 		2.0 (2017-09-23):
@@ -23,9 +24,6 @@
 			Initial release with attack profiles
 =end
 
-#These people are always considered part of the group, regardless of membership
-@core_group = ["Ericos", "Predest", "Alyssea", "Archaeron", "Draccor", "Naina", "Szyxt"]
-
 @script_name = script.name
 
 def name
@@ -36,6 +34,7 @@ end
 def get_current_group
 	#Get members of current group
 	group = [name]
+	clear
 	fput "group"
 	while line = get
 		case line
@@ -56,19 +55,25 @@ end
 	@current_group = get_current_group
 }
 
-@current_room_id = Room.current.id
+@current_room_counter = nil
 @new_room = true
 @poaching = true
 @is_peer = false
+@update_group = false
 
 def poaching?
 	#Test if someone in the room is unexpected, to avoid poaching.
 	#This respects room order, e.g. who was in the room first has hunting rights
 	#If that person(group) leaves, it is no longer considered poaching
 	@poach_targets ||= []
-	if Room.current.id != @current_room_id
+	if @update_group
+		@groups_mutex.synchronize { @current_group = get_current_group }
+		@update_group = false
+	end
+	if !@current_room_counter || XMLData.room_count != @current_room_counter
 		@poach_targets = []
-		pcs = Set.new @core_group
+		pcs = Set.new
+		@vars_mutex.synchronize { pcs.merge Vars[@script_name]['core_group'] }
 		@group_mutex.synchronize {
 			pcs.merge @current_group
 		}
@@ -83,7 +88,7 @@ def poaching?
 		}).to_a
 		respond "Room #{Room.current.id} Poaching: #{@poach_targets}"
 		@poaching = !@poach_targets.empty?
-		@current_room_id = Room.current.id
+		@current_room_counter = XMLData.room_count
 	else
 		old_strangers = Set.new @poach_targets
 		strange_pcs = GameObj.pcs.select {|pc| pc.name !~ party_members} || []
@@ -152,6 +157,7 @@ def maintain_spells spells, min_mana: -1, max_mana: -1
   spells.each { |spell|
     if spell.known? and spell.affordable? and !spell.active?
       waitcastrt?
+			clear
       spell.cast
       waitcastrt?
     end
@@ -189,8 +195,18 @@ end
 
 def cmd_smastery
   #Check if cooldown is in effect
-  return if Spell[9604].active?
-  maintain_spells [Spell[9603]]
+  return if Spell[9604].active? || Spell[9603].active?
+
+	if @smastery_cooldown
+		respond Time.now - @smastery_cooldown
+	end
+	if !@smastery_cooldown || Time.now - @smastery_cooldown >= 180
+		respond "Shadow Mastery should cost #{Spell[9603].stamina_cost}, #{name} has #{checkstamina}, thus the affordable flag states #{Spell[9603].affordable?}"
+	  maintain_spells [Spell[9603]]
+		@smastery_cooldown = Time.now
+	else
+		respond "Shadow Mastery is not detected as active, but it's been less than 3 minutes since the last firing. Rejecting update. This message indicates that active detection is likely buggy."
+	end
 end
 
 def cmd_fury target
@@ -351,7 +367,7 @@ def cmd_empathiclink target
 	return if target.status =~ /dead|gone/
 	return unless Spell[1117].known? and Spell[1117].affordable?
 	return if checkmana <= 45
-	return if GameObj.npcs.count { |npc| valid_target? npc, target_types: ["bandit"]} < 4
+	return if GameObj.npcs.count { |npc| valid_target? npc, valid_types: ["bandit"]} < 4
 
 	waitcastrt?
 	Spell[1117].cast "##{target.id}"
@@ -394,6 +410,7 @@ def find_any_target
 		if npc.type =~ /passive npc|pet|familiar|companion/ || Vars[@script_name]['untargettable'].include?(npc.name)
 			next
 		end
+		clear
 		fput "target ##{npc.id}"
 		line = get until line =~ /^Usage|^You are now (?<success>targeting)|^You do not have a target\.|You can only target creatures and players\.|You can't target|^Could not find a valid target\./
 		if !$~[:success]
@@ -571,19 +588,12 @@ Vars[@script_name]['current'] ||= 'default'
 Vars[@script_name]['targets'] ||= Hash.new
 Vars[@script_name]['untargettable'] ||= []
 Vars[@script_name]['use_target_lists'] = true
+Vars[@script_name]['core_group'] ||= []
 
-#Sets up default profiles for current characters, can be deleted once configured
-if !Vars[@script_name]['profiles'].include? 'default'
-  case name
-  when "Alyssea"
-    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'stand', 'cmd_power', 'cmd_loot']
-  when "Archaeron"
-    Vars[@script_name]['profiles']['default'] = ['cmd_voln', 'stand', 'cmd_feint' , 'cmd_vibration', 'cmd_kill']
-  when "Predest"
-    Vars[@script_name]['profiles']['default'] = ['cmd_gos', 'stand', 'cmd_smastery', 'cmd_sweep', 'cmd_weed', 'cmd_swarm', 'cmd_camo', 'cmd_hide', 'cmd_ambush']
-  when "Ericos"
-    Vars[@script_name]['profiles']['default'] = ['cmd_col', 'stand']
-  end
+def parse_names names
+	#Parse string of names into an array
+	names = Set.new (names.split(",") || []).map {|pc| pc.strip.delete('"').downcase}
+	names.to_a
 end
 
 @cmd_string = "#{$lich_char}#{@script_name}"
@@ -629,14 +639,16 @@ def handle_profile_cmds line
 		}
 	when /profile current\s?(?<set>\w+)?/
 		@vars_mutex.synchronize {
-			if Vars[@script_name]['profiles'].include? $~[:set]
+			respond $~[:set].nil?
+			if Vars[@script_name]['profiles'].include?($~[:set])
 				Vars[@script_name]['current'] = $~[:set]
-			else
+			elsif !$~[:set].nil?
 				respond "#{$~[:set]} is not a valid profile!"
 			end
 		}
 		respond "#{name} is using profile #{Vars[@script_name]['current']}"
 	when /profile help/
+		respond "Commands for editing attack sequence profiles"
 		respond "Usage: #{@cmd_string} profile [options]"
 		respond ""
 		respond "Options:"
@@ -658,15 +670,17 @@ def handle_target_cmds line
 		else
 			print_all_targets
 		end
-	when /targets rm\s+(?<name>[\w "']+)/
-		name = $~[:name].strip.delete '"'
+	when /targets rm\s+(?<name>[\w "',]+)/
+		names = parse_names $~[:name]
 		@vars_mutex.synchronize {
-			found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == name }
-			if found
-				respond "Removed #{name} from target list"
-			else
-				respond "Could not find #{name} in target list"
-			end
+			names.each {|delname|
+				found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == delname }
+				if found
+					respond "Removed #{delname} from target list"
+				else
+					respond "Could not find #{delname} in target list"
+				end
+			}
 		}
 	when /targets add (?<pri>\d+)\s+[\[]?(?<name>[,\w "']+)[\]]?/
 		pri = $~[:pri].to_i
@@ -701,15 +715,58 @@ def handle_target_cmds line
 	end
 end
 
-#Procedure for accepting commands during operation
+#Procedure for accepting core group commands during operation
+def handle_group_cmds line
+	case line
+	when /group list/
+		@vars_mutex.synchronize {
+			respond "Core group: #{Vars[@script_name]['core_group'].map(&:capitalize)}"
+		}
+	when /group add (?<name>[\w ,'"]+)/
+		names = parse_names $~[:name]
+		@vars_mutex.synchronize {
+			pcs = Set.new(Vars[@script_name]['core_group'].map(&:downcase) + names)
+			Vars[@script_name]['core_group'] = pcs.to_a
+		}
+		respond "Added #{names.map {|name| name.capitalize}} to core group"
+	when /group rm (?<name>[\w' ,"]+)/
+		names = parse_names $~[:name]
+		@vars_mutex.synchronize {
+			names.each {|name|
+				pc = Vars[@script_name]['core_group'].delete name
+				if pc
+					respond "Removed #{name.capitalize} from core group"
+				else
+					respond "Could not find #{name.capitalize} to remove from core group"
+				end
+			}
+		}
+	when /group set (?<name>[\w, ]+)?/
+		pcs = Set.new parse_names($~[:name])
+		@vars_mutex.synchronize { Vars[@script_name]['core_group'] = pcs.to_a }
+		respond "Core group set to #{pcs.map(&:capitalize)}"
+	else
+		respond "Commands for adjusting the PC's always considered part of the group for poaching"
+		respond "Usage: #{@cmd_string} group [options]"
+		respond "  list: Lists the current core group"
+		respond "  add [name1,name2,...nameN]: Adds player name(s) to core group"
+		respond "  rm [name]: Removes player name from core group"
+		respond "  set [name1,name2,...nameN]: Overwrites the core group with the given list of names, with an empty list clearing the list"
+	end
+end
+
+#Thread for accepting commands during operation
 command_hook = proc { |line|
 	case line
 	when /#{@cmd_string} update_group/
 		#Updates group for poaching tests
-		@group_mutex.synchronize { @current_group = get_current_group }
+		@update_group = true
 		nil
 	when /#{@cmd_string} commands/
 		respond "Available commands: #{@all_cmds}"
+		nil
+	when /#{@cmd_string} group/
+		handle_group_cmds line
 		nil
 	when /#{@cmd_string} profile/
 		handle_profile_cmds line
@@ -726,6 +783,7 @@ command_hook = proc { |line|
 		respond "  commands: Lists available commands for profiles"
 		respond "  profile: Commands for configuring and setting attack profiles"
 		respond "  targets: Commands for setting target priorities"
+		respond "  group: Commands for modifying the list of people who are always considered part of your group for poaching detection."
 	else
 		line
 	end
