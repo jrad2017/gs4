@@ -12,6 +12,7 @@
 	changelog:
 		2.1:
 			Make the core group a configurable variable
+			Protected profiles from being erased due to invalid commands
 			Improved intelligence and reliability of poaching logic
 			Adding checks for common movement scripts to reduce targetting while running
 		2.0 (2017-09-23):
@@ -617,12 +618,17 @@ def handle_profile_cmds line
 			cmd = cmd.strip
 			if !@all_cmds.include? cmd
 				respond "#{cmd} not a recognized command"
+				cmds = nil
 				break
 			end
 			cmds.push(cmd)
 		}
-		@vars_mutex.synchronize { Vars[@script_name]['profiles'][pname] = cmds }
-		respond "Added profile #{pname} for #{name}"
+		unless cmd.nil?
+			@vars_mutex.synchronize { Vars[@script_name]['profiles'][pname] = cmds }
+			respond "#{pname} = #{cmds.join(', ')}"
+		else
+			respond "Did not update #{pname} with invalid commands."
+		end
 	when /profile rm (?<pname>\w+)/
 		#Removes a profile
 		pname = $~[:pname]
@@ -639,7 +645,6 @@ def handle_profile_cmds line
 		}
 	when /profile current\s?(?<set>\w+)?/
 		@vars_mutex.synchronize {
-			respond $~[:set].nil?
 			if Vars[@script_name]['profiles'].include?($~[:set])
 				Vars[@script_name]['current'] = $~[:set]
 			elsif !$~[:set].nil?
