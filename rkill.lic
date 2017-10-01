@@ -518,34 +518,49 @@ def retarget? target, valid_targets
 	@check_retarget && valid_targets.none? {|noun, pri| /#{noun}/ =~ target.name}
 end
 
+def select_profile target, default_profile
+	profile = default_profile
+	have_match = false
+	@vars_mutex.synchronize {
+		Vars[@script_name]['name_profiles'].each_pair {|type, type_profile|
+			if target.name =~ /#{type}/
+				profile = type_profile
+				have_match = true
+				break
+			end
+		}
+	}
+	unless have_match
+		@vars_mutex.synchronize {
+			Vars[@script_name]['type_profiles'].each_pair {|type, type_profile|
+				if target.type =~ /#{type}/
+					profile = type_profile
+					break
+				end
+			}
+		}
+	end
+	profile
+end
+
 def execute_commands
 	#This defines the core hunting loop for all characters, executing a sequence of functions from a specified profile
 	target = nil
 	target_pri = nil
+	default_profile = nil
 	last_profile = nil
-	select_target = false
 	cmds = []
 	loop {
 		#Rebuild list of commands each loop, for on-the-fly profile switches
 		profile = []
 		valid_targets = nil
 		use_target_list = true
+		current = nil
 		@vars_mutex.synchronize {
 			current = Vars[@script_name]['current']
-			profile = Vars[@script_name]['profiles'][current].dup
 			valid_targets = Vars[@script_name]['targets'].dup
 			use_target_list = Vars[@script_name]['use_target_lists']
 		}
-
-		if profile != last_profile
-			select_target = false
-			cmds = profile.collect { |cmd|
-				m = method(cmd)
-				select_target = select_target || m.arity == 1
-				m
-			}
-			last_profile = profile
-		end
 
 		deltaT = 0.0
 		#Not poaching, valid commands, not in motion
@@ -556,15 +571,26 @@ def execute_commands
 				target_pri = nil
 				@check_retarget = false
 			end
-			if select_target && use_target_list
+			if use_target_list
 				new_target, new_pri = find_priority_target valid_targets
 				if new_target && (!target || target.status =~ /dead|gone/ || !target_pri || new_pri < target_pri)
 					target = new_target
 					target_pri = new_pri
 					fput "target ##{target.id}"
 				end
-			elsif select_target && (!target || target.status =~ /dead|gone/)
+			elsif (!target || target.status =~ /dead|gone/)
 				target = find_any_target
+			end
+
+			pname = select_profile target, current
+			profile = []
+			@vars_mutex.synchronize { profile = Vars[@script_name]['profiles'][pname] }
+
+			if profile != last_profile
+				cmds = profile.collect { |cmd|
+					m = method(cmd)
+				}
+				last_profile = profile
 			end
 
 			startTime = Time.now
@@ -602,6 +628,8 @@ Vars[@script_name]['current'] ||= 'default'
 Vars[@script_name]['targets'] ||= Hash.new
 Vars[@script_name]['untargettable'] ||= []
 Vars[@script_name]['core_group'] ||= []
+Vars[@script_name]['name_profiles'] ||= {}
+Vars[@script_name]['type_profiles'] ||= {}
 if !Vars[@script_name].include? 'use_target_lists'
 	Vars[@script_name]['use_target_lists'] = true
 end
@@ -727,6 +755,54 @@ def handle_target_cmds line
     else
       respond "Targetting any enemy in sight"
     end
+	when /targets profile list/
+		@vars_mutex.synchronize {
+			respond "Dynamic profile settings:"
+			Vars[@script_name]['type_profiles'].each_pair {|noun, pname|
+				respond "#{noun} #{pname}"
+			}
+			Vars[@script_name]['name_profiles'].each_pair {|noun, pname|
+				respond "#{noun} #{pname}"
+			}
+		}
+	when /targets profile (?<pname>\w+) (?<name>[\w "',]+)/
+		@vars_mutex.synchronize {
+			unless Vars[@script_name]['profiles'].include? $~[:pname]
+				respond "#{$~[:pname]} is not a valid profile"
+				return
+			end
+		}
+		pname = $~[:pname]
+		names = parse_names $~[:name]
+		@vars_mutex.synchronize {
+			names.each {|type|
+				if type =~ /^grimswarm$|^bandit$|^undead$|^noncorporeal$/
+					Vars[@script_name]['type_profiles'][type] = pname
+				else
+					Vars[@script_name]['name_profiles'][type] = pname
+				end
+			}
+		}
+		respond "#{pname} will be used when encountering #{names.join(", ")}."
+	when /targets profile (?:rm|del|rem) (?<name>[\w "',]+)/
+		deleted = []
+		names = parse_names $~[:name]
+		@vars_mutex.synchronize {
+			names.each {|type|
+				found = nil
+				if type =~ /^grimswarm$|^bandit$|^undead$|^noncorporeal$/
+					found = Vars[@script_name]['type_profiles'].reject! { |tgt, pname| type == delname }
+				else
+					found = Vars[@script_name]['name_profiles'].reject! { |tgt, pname| type == delname }
+				end
+				deleted.push(type) if found
+			}
+		}
+		if deleted.empty?
+			respond "Could find any target profiles matching #{names}"
+		else
+			respond "Removed profiles for #{deleted}"
+		end
 	when /targets help/
 		respond "Control prioritized list of targets to hunt"
 		respond "Usage: #{@cmd_string} targets [options]"
@@ -819,6 +895,7 @@ command_hook = proc { |line|
 		respond "  targets: Commands for setting target priorities"
 		respond "  group: Commands for modifying the list of people who are always considered part of your group for poaching detection."
 		respond "  safe_loot (on|off): Sets flag indicating if creatures should be looted in rooms with no living enemies, or whenever a dead creature is found."
+		nil
 	else
 		line
 	end
