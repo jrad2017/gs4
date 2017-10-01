@@ -11,6 +11,7 @@
 
 	changelog:
 		2.1:
+			Add the ability to automatically switch profiles based on creature name or type
 			Make the core group a configurable variable
 			Protected profiles from being erased due to invalid commands
 			Improved intelligence and reliability of poaching logic
@@ -810,8 +811,11 @@ def handle_target_cmds line
 		respond ""
 		respond "Options: "
 		respond "  list [$priority]: Prints all creatures, or all creatures of a specified priority level"
-		respond "  add $priority $name: Adds $name to $priority level"
-		respond "  rm $priority $name: Removes $name from $priority level"
+		respond "  add $priority $name1,$name2,...,$nameN: Adds $name1-N to $priority level"
+		respond "  rm $priority $name1,$name2,...,$nameN: Removes $name from $priority level"
+		respond "  profile $profile $name1,$name2,...,$nameN: Sets the $profile to use when targetting $name1-N. If a $name is an aggressive monster type (e.g. grimswarm, bandit, undead) then use that profile for a target if no name matches"
+		respond "  profile rm $name1,$name2,..$nameN: Removes the $profile setting for the given $names"
+		respond "  profile list: Lists all dynamic profile settings"
 	end
 end
 
