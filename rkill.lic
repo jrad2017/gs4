@@ -645,7 +645,6 @@ def handle_profile_cmds line
 		}
 	when /profile current\s?(?<set>\w+)?/
 		@vars_mutex.synchronize {
-			respond $~[:set].nil?
 			if Vars[@script_name]['profiles'].include?($~[:set])
 				Vars[@script_name]['current'] = $~[:set]
 			elsif !$~[:set].nil?
