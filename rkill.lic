@@ -791,8 +791,6 @@ command_hook = proc { |line|
 			flag = $~[:flag] =~ /yes|on|1|true/i
 			@vars_mutex.synchronize {Vars[@script_name]['safe_loot'] = flag}
 		end
-		flag = true
-		@vars_mutex.synchronize {Vars[@script_name]['safe_loot'] = flag}
 		if flag
 			respond "Safe looting is on"
 		else
