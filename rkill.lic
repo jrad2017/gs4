@@ -623,7 +623,7 @@ def handle_profile_cmds line
 			end
 			cmds.push(cmd)
 		}
-		unless cmd.nil?
+		unless cmds.nil?
 			@vars_mutex.synchronize { Vars[@script_name]['profiles'][pname] = cmds }
 			respond "#{pname} = #{cmds.join(', ')}"
 		else
