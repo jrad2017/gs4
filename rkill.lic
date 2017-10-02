@@ -506,7 +506,7 @@ def moving?
 	running?("go2") || running?("wander")
 end
 
-def retarget? valid_targets
+def retarget? target, valid_targets
 	@check_retarget && valid_targets.none? {|noun, pri| /#{noun}/ =~ target.name}
 end
 
@@ -543,7 +543,7 @@ def execute_commands
 		#Not poaching, valid commands, not in motion
 		if !dead? && !moving? && !poaching? && cmds
 			#Only look for a target if we need it
-			if target && (target.status =~ /dead|gone/ || retarget?(valid_targets))
+			if target && (target.status =~ /dead|gone/ || retarget?(target, valid_targets))
 				target = nil
 				target_pri = nil
 				@check_retarget = false
@@ -563,7 +563,7 @@ def execute_commands
 			#Executes each command in order, providing target if requested
 			cmds.each{ |cmd|
 				#This means we need to retarget and restart command loop
-				if moving? || poaching? || retarget?(valid_targets)
+				if moving? || poaching? || retarget?(target, valid_targets)
 					break
 				end
 				if cmd.parameters[0].include?(:target)
