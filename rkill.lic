@@ -527,6 +527,7 @@ def select_profile target, default_profile
 			if target.name =~ /#{type}/
 				profile = type_profile
 				have_match = true
+				respond "Selecting profile #{profile} based on name match #{type}"
 				break
 			end
 		}
@@ -536,10 +537,16 @@ def select_profile target, default_profile
 			Vars[@script_name]['type_profiles'].each_pair {|type, type_profile|
 				if target.type =~ /#{type}/
 					profile = type_profile
+					respond "Selecting profile #{profile} based on type match #{type}"
+					have_match = true
 					break
 				end
 			}
 		}
+	end
+
+	unless have_match
+		respond "Using default profile #{default_profile}"
 	end
 	profile
 end
