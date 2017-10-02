@@ -808,6 +808,7 @@ command_hook = proc { |line|
 		respond "  profile: Commands for configuring and setting attack profiles"
 		respond "  targets: Commands for setting target priorities"
 		respond "  group: Commands for modifying the list of people who are always considered part of your group for poaching detection."
+		respond "  safe_loot (on|off): Sets flag indicating if creatures should be looted in rooms with no living enemies, or whenever a dead creature is found."
 	else
 		line
 	end
