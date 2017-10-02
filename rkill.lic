@@ -61,6 +61,7 @@ end
 @poaching = true
 @is_peer = false
 @update_group = false
+@check_retarget = false
 
 def poaching?
 	#Test if someone in the room is unexpected, to avoid poaching.
@@ -513,6 +514,10 @@ def moving?
 	running?("go2") || running?("wander")
 end
 
+def retarget? target, valid_targets
+	@check_retarget && valid_targets.none? {|noun, pri| /#{noun}/ =~ target.name}
+end
+
 def execute_commands
 	#This defines the core hunting loop for all characters, executing a sequence of functions from a specified profile
 	target = nil
@@ -546,9 +551,10 @@ def execute_commands
 		#Not poaching, valid commands, not in motion
 		if !dead? && !moving? && !poaching? && cmds
 			#Only look for a target if we need it
-			if target && target.status =~ /dead|gone/
+			if target && (target.status =~ /dead|gone/ || retarget?(target, valid_targets))
 				target = nil
 				target_pri = nil
+				@check_retarget = false
 			end
 			if select_target && use_target_list
 				new_target, new_pri = find_priority_target valid_targets
@@ -565,7 +571,7 @@ def execute_commands
 			#Executes each command in order, providing target if requested
 			cmds.each{ |cmd|
 				#This means we need to retarget and restart command loop
-				if moving? || poaching?
+				if moving? || poaching? || retarget?(target, valid_targets)
 					break
 				end
 				if cmd.parameters[0].include?(:target)
@@ -694,6 +700,7 @@ def handle_target_cmds line
 				found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == delname }
 				if found
 					respond "Removed #{delname} from target list"
+					@check_retarget = true
 				else
 					respond "Could not find #{delname} in target list"
 				end
