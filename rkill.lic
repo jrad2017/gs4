@@ -156,14 +156,16 @@ def maintain_spells spells, min_mana: -1, max_mana: -1
   return if min_mana >= 0 and checkmana <= min_mana
   return if max_mana >= 0 and checkmana >= max_mana
 
+	res = []
   spells.each { |spell|
     if spell.known? and spell.affordable? and !spell.active?
       waitcastrt?
 			clear
-      spell.cast
+      res.push spell.cast
       waitcastrt?
     end
   }
+	res
 end
 
 def cmd_gos
