@@ -206,8 +206,13 @@ def cmd_smastery
 	end
 	if !@smastery_cooldown || Time.now - @smastery_cooldown >= 180
 		respond "Shadow Mastery should cost #{Spell[9603].stamina_cost}, #{name} has #{checkstamina}, thus the affordable flag states #{Spell[9603].affordable?}"
-	  maintain_spells [Spell[9603]]
-		@smastery_cooldown = Time.now
+	  res = maintain_spells [Spell[9603]]
+		unless res.empty?
+			@smastery_cooldown = Time.now
+			unless Spell[9603].active?
+				fput "spell active"
+			end
+		end
 	else
 		respond "Shadow Mastery is not detected as active, but it's been less than 3 minutes since the last firing. Rejecting update. This message indicates that active detection is likely buggy."
 	end
