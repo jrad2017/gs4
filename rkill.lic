@@ -847,4 +847,9 @@ before_dying {
 	DownstreamHook.remove "#{script.name} update_group"
 }
 
+#If launched with commands, process them
+unless script.vars.empty?
+	command_hook.call script.vars[0]
+end
+
 execute_commands
