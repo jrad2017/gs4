@@ -697,7 +697,7 @@ def handle_target_cmds line
 		names = parse_names $~[:name]
 		@vars_mutex.synchronize {
 			names.each {|delname|
-				found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt == delname }
+				found = Vars[@script_name]['targets'].reject! { |tgt, pri| tgt =~ /^#{delname}$/i }
 				if found
 					respond "Removed #{delname} from target list"
 					@check_retarget = true
