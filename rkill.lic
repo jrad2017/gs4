@@ -211,6 +211,15 @@ def cmd_smastery
 	end
 end
 
+def cmd_tonis
+	return unless Spell[1035].known? and Spell[1035].affordable?
+	return if checkmana <= 85
+
+	waitcastrt?
+	Spell[1035].cast
+	waitcastrt?
+end
+
 def cmd_fury target
 	return unless Spell[635].known? and Spell[635].affordable?
 	return if checkmana <= 45
@@ -592,7 +601,7 @@ def execute_commands
 end
 
 #This is the list of all commands which can be used in profiles. This is to ensure that incorrectly named or unexpected functions don't get injected
-@all_cmds = ['cmd_gos', 'cmd_power', 'cmd_loot', 'cmd_voln', 'cmd_vibration', 'cmd_kill', 'cmd_smastery', 'cmd_camo', 'cmd_hide', 'cmd_ambush', 'cmd_swarm', 'cmd_weed', 'cmd_col', 'stand', 'cmd_bone', 'cmd_empathiclink', 'cmd_bind', 'cmd_sympathy', 'cmd_mstrike', 'cmd_sweep', 'cmd_feint', 'cmd_spike']
+@all_cmds = ['cmd_gos', 'cmd_power', 'cmd_loot', 'cmd_voln', 'cmd_vibration', 'cmd_kill', 'cmd_smastery', 'cmd_camo', 'cmd_hide', 'cmd_ambush', 'cmd_swarm', 'cmd_weed', 'cmd_col', 'stand', 'cmd_bone', 'cmd_empathiclink', 'cmd_bind', 'cmd_sympathy', 'cmd_mstrike', 'cmd_sweep', 'cmd_feint', 'cmd_spike', 'cmd_tonis']
 
 #NOTE: At this point, only one thread is messing with these vars, so there's no need to mutex.
 #Sets up basic configuration structures
